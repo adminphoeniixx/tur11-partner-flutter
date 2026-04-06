@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // ✅ ADD
+import 'firebase_options.dart'; // ✅ ADD
+
 import 'theme/app_theme.dart';
 import 'screens/auth_screens.dart';
 import 'screens/app_shell.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // ✅ required
+
+  // ✅ Firebase initialize
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const Turf11App());
 }
 

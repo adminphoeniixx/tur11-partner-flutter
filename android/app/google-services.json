@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "597499278453",
+    "project_id": "turf11-dac3b",
+    "storage_bucket": "turf11-dac3b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597499278453:android:b2c7cfe591d59d3fecf43c",
+        "android_client_info": {
+          "package_name": "com.example.flutter_turf11"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuzRayKFcFJ3vDdJ0JbNXVboNFDYYR1ME"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597499278453:android:d98d51138436d9b9ecf43c",
+        "android_client_info": {
+          "package_name": "turf11.book.play"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuzRayKFcFJ3vDdJ0JbNXVboNFDYYR1ME"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597499278453:android:8e2154c9c2756a89ecf43c",
+        "android_client_info": {
+          "package_name": "turf11.partner.book"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuzRayKFcFJ3vDdJ0JbNXVboNFDYYR1ME"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
