@@ -26,13 +26,19 @@ class StatusBadge extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 5, height: 5, decoration: BoxDecoration(color: fg, shape: BoxShape.circle)),
+          Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(color: fg, shape: BoxShape.circle)),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg)),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10, fontWeight: FontWeight.w700, color: fg)),
         ],
       ),
     );
@@ -46,20 +52,29 @@ class AppBadge extends StatelessWidget {
   final String label;
   final Color bg;
   final Color fg;
-  const AppBadge({super.key, required this.label, required this.bg, required this.fg});
+  const AppBadge(
+      {super.key, required this.label, required this.bg, required this.fg});
 
-  factory AppBadge.green(String label) => AppBadge(label: label, bg: AppColors.greenLt, fg: AppColors.green);
-  factory AppBadge.red(String label) => AppBadge(label: label, bg: AppColors.redLt, fg: AppColors.red);
-  factory AppBadge.amber(String label) => AppBadge(label: label, bg: AppColors.amberLt, fg: AppColors.amber);
-  factory AppBadge.blue(String label) => AppBadge(label: label, bg: AppColors.blueLt, fg: AppColors.blue);
-  factory AppBadge.dark(String label) => AppBadge(label: label, bg: AppColors.dark, fg: Colors.white);
+  factory AppBadge.green(String label) =>
+      AppBadge(label: label, bg: AppColors.greenLt, fg: AppColors.green);
+  factory AppBadge.red(String label) =>
+      AppBadge(label: label, bg: AppColors.redLt, fg: AppColors.red);
+  factory AppBadge.amber(String label) =>
+      AppBadge(label: label, bg: AppColors.amberLt, fg: AppColors.amber);
+  factory AppBadge.blue(String label) =>
+      AppBadge(label: label, bg: AppColors.blueLt, fg: AppColors.blue);
+  factory AppBadge.dark(String label) =>
+      AppBadge(label: label, bg: AppColors.dark, fg: Colors.white);
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Text(label,
+          style:
+              TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg)),
     );
   }
 }
@@ -86,33 +101,114 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cc = changeColor ?? (isUp ? AppColors.green : AppColors.red);
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 14, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (icon != null) ...[icon!, const SizedBox(height: 10)],
-          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.5)),
-          const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.dark)),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              if (isUp)
-                Icon(Icons.arrow_upward, size: 12, color: cc)
-              else
-                Icon(Icons.arrow_downward, size: 12, color: cc),
-              const SizedBox(width: 3),
-              Flexible(child: Text(change, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cc))),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact =
+            constraints.maxHeight < 120 || constraints.maxWidth < 160;
+        final veryCompact =
+            constraints.maxHeight < 105 || constraints.maxWidth < 145;
+        final padding = veryCompact ? 10.0 : (compact ? 14.0 : 18.0);
+        final iconSize = veryCompact ? 24.0 : (compact ? 32.0 : 40.0);
+        final labelStyle = TextStyle(
+          fontSize: veryCompact ? 9 : (compact ? 10 : 11),
+          fontWeight: FontWeight.w600,
+          color: AppColors.muted,
+          letterSpacing: 0.5,
+        );
+        final valueStyle = TextStyle(
+          fontSize: veryCompact ? 18 : (compact ? 22 : 28),
+          fontWeight: FontWeight.w800,
+          color: AppColors.dark,
+        );
+        final changeStyle = TextStyle(
+          fontSize: veryCompact ? 9 : (compact ? 10 : 11),
+          fontWeight: FontWeight.w600,
+          color: cc,
+        );
+
+        return Container(
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 14,
+                  offset: const Offset(0, 2))
             ],
           ),
-        ],
-      ),
+          child: LayoutBuilder(
+            builder: (context, innerConstraints) {
+              return SizedBox(
+                width: innerConstraints.maxWidth,
+                height: innerConstraints.maxHeight,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: innerConstraints.maxWidth,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (icon != null) ...[
+                          SizedBox(
+                            width: iconSize,
+                            height: iconSize,
+                            child: FittedBox(
+                              fit: BoxFit.contain,
+                              alignment: Alignment.centerLeft,
+                              child: icon!,
+                            ),
+                          ),
+                          SizedBox(
+                              height: veryCompact ? 4 : (compact ? 8 : 10)),
+                        ],
+                        Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: labelStyle,
+                        ),
+                        SizedBox(height: veryCompact ? 2 : (compact ? 4 : 6)),
+                        Text(
+                          value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: valueStyle,
+                        ),
+                        SizedBox(height: veryCompact ? 2 : (compact ? 2 : 4)),
+                        Row(
+                          children: [
+                            if (isUp)
+                              Icon(Icons.arrow_upward,
+                                  size: veryCompact ? 9 : (compact ? 10 : 12),
+                                  color: cc)
+                            else
+                              Icon(Icons.arrow_downward,
+                                  size: veryCompact ? 9 : (compact ? 10 : 12),
+                                  color: cc),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                change,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: changeStyle,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -123,7 +219,11 @@ class PrimaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Color bgColor;
 
-  const PrimaryButton({super.key, required this.label, this.onPressed, this.bgColor = AppColors.dark});
+  const PrimaryButton(
+      {super.key,
+      required this.label,
+      this.onPressed,
+      this.bgColor = AppColors.dark});
 
   @override
   Widget build(BuildContext context) {
@@ -135,17 +235,22 @@ class PrimaryButton extends StatelessWidget {
           backgroundColor: bgColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+            Text(label,
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
             Container(
               width: 36,
               height: 36,
-              decoration: const BoxDecoration(color: AppColors.green, shape: BoxShape.circle),
-              child: const Icon(Icons.arrow_forward, color: Colors.white, size: 16),
+              decoration: const BoxDecoration(
+                  color: AppColors.green, shape: BoxShape.circle),
+              child: const Icon(Icons.arrow_forward,
+                  color: Colors.white, size: 16),
             ),
           ],
         ),
@@ -173,14 +278,31 @@ class PillButton extends StatelessWidget {
     this.outlined = false,
   });
 
-  factory PillButton.green(String label, {VoidCallback? onPressed, IconData? icon}) =>
-      PillButton(label: label, onPressed: onPressed, bgColor: AppColors.green, icon: icon);
+  factory PillButton.green(String label,
+          {VoidCallback? onPressed, IconData? icon}) =>
+      PillButton(
+          label: label,
+          onPressed: onPressed,
+          bgColor: AppColors.green,
+          icon: icon);
 
-  factory PillButton.ghost(String label, {VoidCallback? onPressed, IconData? icon}) =>
-      PillButton(label: label, onPressed: onPressed, bgColor: AppColors.white, fgColor: AppColors.dark, icon: icon, outlined: true);
+  factory PillButton.ghost(String label,
+          {VoidCallback? onPressed, IconData? icon}) =>
+      PillButton(
+          label: label,
+          onPressed: onPressed,
+          bgColor: AppColors.white,
+          fgColor: AppColors.dark,
+          icon: icon,
+          outlined: true);
 
-  factory PillButton.red(String label, {VoidCallback? onPressed, IconData? icon}) =>
-      PillButton(label: label, onPressed: onPressed, bgColor: AppColors.red, icon: icon);
+  factory PillButton.red(String label,
+          {VoidCallback? onPressed, IconData? icon}) =>
+      PillButton(
+          label: label,
+          onPressed: onPressed,
+          bgColor: AppColors.red,
+          icon: icon);
 
   @override
   Widget build(BuildContext context) {
@@ -193,13 +315,22 @@ class PillButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: outlined
-              ? BoxDecoration(borderRadius: BorderRadius.circular(30), border: Border.all(color: AppColors.border, width: 1.5))
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: AppColors.border, width: 1.5))
               : null,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[Icon(icon, size: 13, color: fgColor), const SizedBox(width: 5)],
-              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fgColor)),
+              if (icon != null) ...[
+                Icon(icon, size: 13, color: fgColor),
+                const SizedBox(width: 5)
+              ],
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: fgColor)),
             ],
           ),
         ),
@@ -227,11 +358,23 @@ class SmallButton extends StatelessWidget {
     this.outlined = false,
   });
 
-  factory SmallButton.ghost(String label, {VoidCallback? onPressed, IconData? icon}) =>
-      SmallButton(label: label, onPressed: onPressed, bgColor: AppColors.white, fgColor: AppColors.dark, icon: icon, outlined: true);
+  factory SmallButton.ghost(String label,
+          {VoidCallback? onPressed, IconData? icon}) =>
+      SmallButton(
+          label: label,
+          onPressed: onPressed,
+          bgColor: AppColors.white,
+          fgColor: AppColors.dark,
+          icon: icon,
+          outlined: true);
 
-  factory SmallButton.red(String label, {VoidCallback? onPressed, IconData? icon}) =>
-      SmallButton(label: label, onPressed: onPressed, bgColor: AppColors.red, icon: icon);
+  factory SmallButton.red(String label,
+          {VoidCallback? onPressed, IconData? icon}) =>
+      SmallButton(
+          label: label,
+          onPressed: onPressed,
+          bgColor: AppColors.red,
+          icon: icon);
 
   @override
   Widget build(BuildContext context) {
@@ -244,13 +387,22 @@ class SmallButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: outlined
-              ? BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.border))
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border))
               : null,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[Icon(icon, size: 11, color: fgColor), const SizedBox(width: 4)],
-              Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fgColor)),
+              if (icon != null) ...[
+                Icon(icon, size: 11, color: fgColor),
+                const SizedBox(width: 4)
+              ],
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: fgColor)),
             ],
           ),
         ),
@@ -265,7 +417,11 @@ class ChipSelector extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onSelected;
 
-  const ChipSelector({super.key, required this.options, required this.selected, required this.onSelected});
+  const ChipSelector(
+      {super.key,
+      required this.options,
+      required this.selected,
+      required this.onSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -282,11 +438,15 @@ class ChipSelector extends StatelessWidget {
             decoration: BoxDecoration(
               color: isOn ? AppColors.dark : AppColors.white,
               borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: isOn ? AppColors.dark : AppColors.border, width: 1.5),
+              border: Border.all(
+                  color: isOn ? AppColors.dark : AppColors.border, width: 1.5),
             ),
             child: Text(
               options[i],
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: isOn ? Colors.white : AppColors.muted),
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isOn ? Colors.white : AppColors.muted),
             ),
           ),
         );
@@ -324,7 +484,12 @@ class AppToggle extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 4, offset: const Offset(0, 1))],
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1))
+              ],
             ),
           ),
         ),
@@ -340,7 +505,12 @@ class ToggleRow extends StatelessWidget {
   final bool value;
   final ValueChanged<bool>? onChanged;
 
-  const ToggleRow({super.key, required this.label, this.subtitle, required this.value, this.onChanged});
+  const ToggleRow(
+      {super.key,
+      required this.label,
+      this.subtitle,
+      required this.value,
+      this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -352,9 +522,13 @@ class ToggleRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500)),
                 if (subtitle != null)
-                  Text(subtitle!, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                  Text(subtitle!,
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.muted)),
               ],
             ),
           ),
@@ -376,7 +550,11 @@ class SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(top: 20, bottom: 10),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.muted, letterSpacing: 0.9),
+        style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: AppColors.muted,
+            letterSpacing: 0.9),
       ),
     );
   }
@@ -393,7 +571,11 @@ class FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.muted, letterSpacing: 0.6),
+        style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.muted,
+            letterSpacing: 0.6),
       ),
     );
   }
@@ -415,7 +597,12 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 14, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 14,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: child,
     );
@@ -428,7 +615,8 @@ class PrefixInput extends StatelessWidget {
   final String hint;
   final TextInputType? keyboardType;
 
-  const PrefixInput({super.key, required this.prefix, required this.hint, this.keyboardType});
+  const PrefixInput(
+      {super.key, required this.prefix, required this.hint, this.keyboardType});
 
   @override
   Widget build(BuildContext context) {
@@ -444,10 +632,17 @@ class PrefixInput extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: const BoxDecoration(
               color: AppColors.bg2,
-              border: Border(right: BorderSide(color: AppColors.border, width: 1.5)),
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
+              border: Border(
+                  right: BorderSide(color: AppColors.border, width: 1.5)),
+              borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  bottomLeft: Radius.circular(12)),
             ),
-            child: Text(prefix, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.dark2)),
+            child: Text(prefix,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.dark2)),
           ),
           Expanded(
             child: TextField(
@@ -455,7 +650,8 @@ class PrefixInput extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: hint,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
               ),
@@ -473,7 +669,11 @@ class UploadZone extends StatelessWidget {
   final String? subtitle;
   final IconData icon;
 
-  const UploadZone({super.key, required this.label, this.subtitle, this.icon = Icons.cloud_upload_outlined});
+  const UploadZone(
+      {super.key,
+      required this.label,
+      this.subtitle,
+      this.icon = Icons.cloud_upload_outlined});
 
   @override
   Widget build(BuildContext context) {
@@ -484,17 +684,26 @@ class UploadZone extends StatelessWidget {
         padding: const EdgeInsets.all(30),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border, width: 2, strokeAlign: BorderSide.strokeAlignCenter),
+          border: Border.all(
+              color: AppColors.border,
+              width: 2,
+              strokeAlign: BorderSide.strokeAlignCenter),
         ),
         child: Column(
           children: [
             Icon(icon, size: 36, color: AppColors.muted2),
             const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted)),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.muted)),
             if (subtitle != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(subtitle!, style: const TextStyle(fontSize: 11, color: AppColors.muted2)),
+                child: Text(subtitle!,
+                    style:
+                        const TextStyle(fontSize: 11, color: AppColors.muted2)),
               ),
           ],
         ),
@@ -509,17 +718,24 @@ class AppProgressBar extends StatelessWidget {
   final Color color;
   final double height;
 
-  const AppProgressBar({super.key, required this.value, this.color = AppColors.green, this.height = 6});
+  const AppProgressBar(
+      {super.key,
+      required this.value,
+      this.color = AppColors.green,
+      this.height = 6});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: height,
-      decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(3)),
+      decoration: BoxDecoration(
+          color: AppColors.border, borderRadius: BorderRadius.circular(3)),
       child: FractionallySizedBox(
         alignment: Alignment.centerLeft,
         widthFactor: value.clamp(0, 1),
-        child: Container(decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+        child: Container(
+            decoration: BoxDecoration(
+                color: color, borderRadius: BorderRadius.circular(3))),
       ),
     );
   }
@@ -547,7 +763,9 @@ class AppAvatar extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
       alignment: Alignment.center,
-      child: Text(initials, style: TextStyle(fontSize: size * 0.35, fontWeight: FontWeight.w800, color: fg)),
+      child: Text(initials,
+          style: TextStyle(
+              fontSize: size * 0.35, fontWeight: FontWeight.w800, color: fg)),
     );
   }
 }
@@ -565,7 +783,9 @@ class StarRating extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (i) {
         return Icon(
-          i < rating.floor() ? Icons.star : (i < rating ? Icons.star_half : Icons.star_border),
+          i < rating.floor()
+              ? Icons.star
+              : (i < rating ? Icons.star_half : Icons.star_border),
           size: size,
           color: i < rating ? AppColors.green : AppColors.border,
         );

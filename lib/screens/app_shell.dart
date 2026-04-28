@@ -83,6 +83,112 @@ class _AppShellState extends State<AppShell> {
     }
   }
 
+  PreferredSizeWidget _buildAppBar(bool isWide) {
+    return AppBar(
+      automaticallyImplyLeading: false,
+      toolbarHeight: 60,
+      backgroundColor: AppColors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      titleSpacing: 0,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          border: const Border(
+            bottom: BorderSide(color: AppColors.border),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 14,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+      ),
+      title: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
+          children: [
+            if (!isWide)
+              GestureDetector(
+                onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.bg2,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Icon(Icons.menu, size: 16),
+                ),
+              ),
+            if (!isWide) const SizedBox(width: 12),
+            Text(
+              _titles[_currentScreen] ?? 'Turf11',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.dark,
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => _navigate('notifications'),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.bg2,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Stack(
+                  children: [
+                    const Center(
+                      child: Icon(
+                        Icons.notifications_outlined,
+                        size: 16,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: AppColors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.white,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () => _navigate('profile'),
+              child: const AppAvatar(
+                initials: 'VS',
+                size: 36,
+                bg: AppColors.dark,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 900;
@@ -99,89 +205,18 @@ class _AppShellState extends State<AppShell> {
           if (isWide)
             SizedBox(
               width: 240,
-              child: AppSidebar(currentScreen: _currentScreen, onNavigate: _navigate),
+              child: AppSidebar(
+                  currentScreen: _currentScreen, onNavigate: _navigate),
             ),
           // Main content
           Expanded(
-            child: Column(
-              children: [
-                // Top bar
-                Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    border: const Border(bottom: BorderSide(color: AppColors.border)),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 14, offset: const Offset(0, 2))],
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      if (!isWide)
-                        GestureDetector(
-                          onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.bg2,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: const Icon(Icons.menu, size: 16),
-                          ),
-                        ),
-                      if (!isWide) const SizedBox(width: 12),
-                      Text(
-                        _titles[_currentScreen] ?? 'Turf11',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.dark),
-                      ),
-                      const Spacer(),
-                      // Notification bell
-                      GestureDetector(
-                        onTap: () => _navigate('notifications'),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: AppColors.bg2,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Stack(
-                            children: [
-                              const Center(child: Icon(Icons.notifications_outlined, size: 16, color: AppColors.muted)),
-                              Positioned(
-                                top: 6, right: 6,
-                                child: Container(
-                                  width: 7, height: 7,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.red,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.white, width: 1.5),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Profile avatar
-                      GestureDetector(
-                        onTap: () => _navigate('profile'),
-                        child: const AppAvatar(initials: 'VS', size: 36, bg: AppColors.dark),
-                      ),
-                    ],
-                  ),
-                ),
-                // Screen content
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: _buildScreen(),
-                  ),
-                ),
-              ],
+            child: Scaffold(
+              backgroundColor: AppColors.bg,
+              appBar: _buildAppBar(isWide),
+              body: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: _buildScreen(),
+              ),
             ),
           ),
         ],

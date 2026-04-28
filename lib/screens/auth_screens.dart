@@ -187,6 +187,9 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cardPadding = screenWidth < 360 ? 20.0 : 40.0;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Center(
@@ -194,7 +197,7 @@ class _OtpScreenState extends State<OtpScreen> {
           padding: const EdgeInsets.all(20),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 440),
-            padding: const EdgeInsets.all(40),
+            padding: EdgeInsets.all(cardPadding),
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(20),
@@ -262,52 +265,61 @@ class _OtpScreenState extends State<OtpScreen> {
                 ),
                 const SizedBox(height: 20),
                 // OTP Boxes
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(6, (i) {
-                    return Container(
-                      width: 48,
-                      height: 56,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      child: TextField(
-                        controller: _controllers[i],
-                        focusNode: _focusNodes[i],
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        maxLength: 1,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w800),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          contentPadding: EdgeInsets.zero,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                                color: AppColors.border, width: 2),
+                LayoutBuilder(
+                  builder: (context, _) {
+                    const fieldSpacing = 8.0;
+
+                    return Row(
+                      children: List.generate(6, (i) {
+                        return Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                                right: i == 5 ? 0 : fieldSpacing),
+                            child: SizedBox(
+                              height: 56,
+                              child: TextField(
+                                controller: _controllers[i],
+                                focusNode: _focusNodes[i],
+                                textAlign: TextAlign.center,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(1),
+                                ],
+                                style: const TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.w800),
+                                decoration: InputDecoration(
+                                  contentPadding: EdgeInsets.zero,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                        color: AppColors.border, width: 2),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                        color: AppColors.border, width: 2),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                        color: AppColors.green, width: 2),
+                                  ),
+                                ),
+                                onChanged: (v) {
+                                  if (v.isNotEmpty && i < 5) {
+                                    _focusNodes[i + 1].requestFocus();
+                                  } else if (v.isEmpty && i > 0) {
+                                    _focusNodes[i - 1].requestFocus();
+                                  }
+                                },
+                              ),
+                            ),
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                                color: AppColors.border, width: 2),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                                color: AppColors.green, width: 2),
-                          ),
-                        ),
-                        onChanged: (v) {
-                          if (v.isNotEmpty && i < 5)
-                            _focusNodes[i + 1].requestFocus();
-                          if (v.isEmpty && i > 0)
-                            _focusNodes[i - 1].requestFocus();
-                        },
-                      ),
+                        );
+                      }),
                     );
-                  }),
+                  },
                 ),
                 const SizedBox(height: 20),
                 PrimaryButton(
