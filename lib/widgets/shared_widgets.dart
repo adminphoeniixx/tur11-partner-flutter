@@ -1,6 +1,95 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
+class Turf11PartnerLogo extends StatelessWidget {
+  final bool light;
+  final bool showMark;
+  final bool showText;
+  final double markSize;
+  final double textSize;
+  final MainAxisSize mainAxisSize;
+
+  const Turf11PartnerLogo({
+    super.key,
+    this.light = false,
+    this.showMark = true,
+    this.showText = true,
+    this.markSize = 48,
+    this.textSize = 22,
+    this.mainAxisSize = MainAxisSize.min,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryText = light ? Colors.white : AppColors.dark;
+    final secondaryText =
+        light ? Colors.white.withOpacity(0.62) : AppColors.muted;
+
+    return Row(
+      mainAxisSize: mainAxisSize,
+      children: [
+        if (showMark) ...[
+          Container(
+            width: markSize,
+            height: markSize,
+            decoration: BoxDecoration(
+              color: AppColors.green,
+              borderRadius: BorderRadius.circular(markSize * 0.3),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.green.withOpacity(light ? 0.35 : 0.18),
+                  blurRadius: markSize * 0.32,
+                  offset: Offset(0, markSize * 0.12),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.sports_cricket,
+              size: markSize * 0.48,
+              color: Colors.white,
+            ),
+          ),
+          if (showText) SizedBox(width: markSize * 0.22),
+        ],
+        if (showText)
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(
+                  'Turf',
+                  style: TextStyle(
+                    fontSize: textSize,
+                    fontWeight: FontWeight.w800,
+                    color: primaryText,
+                  ),
+                ),
+                Text(
+                  '11',
+                  style: TextStyle(
+                    fontSize: textSize,
+                    fontWeight: FontWeight.w800,
+                    color: light ? AppColors.greenBright : AppColors.green,
+                  ),
+                ),
+              ]),
+              Text(
+                'Partner',
+                style: TextStyle(
+                  fontSize: textSize * 0.42,
+                  fontWeight: FontWeight.w800,
+                  color: secondaryText,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
 // ── STATUS BADGE ──
 class StatusBadge extends StatelessWidget {
   final String label;
@@ -107,16 +196,16 @@ class StatCard extends StatelessWidget {
             constraints.maxHeight < 120 || constraints.maxWidth < 160;
         final veryCompact =
             constraints.maxHeight < 105 || constraints.maxWidth < 145;
-        final padding = veryCompact ? 10.0 : (compact ? 14.0 : 18.0);
-        final iconSize = veryCompact ? 24.0 : (compact ? 32.0 : 40.0);
+        final padding = veryCompact ? 8.0 : (compact ? 12.0 : 14.0);
+        final iconSize = veryCompact ? 22.0 : (compact ? 28.0 : 34.0);
         final labelStyle = TextStyle(
-          fontSize: veryCompact ? 9 : (compact ? 10 : 11),
+          fontSize: veryCompact ? 9 : (compact ? 10 : 10),
           fontWeight: FontWeight.w600,
           color: AppColors.muted,
           letterSpacing: 0.5,
         );
         final valueStyle = TextStyle(
-          fontSize: veryCompact ? 18 : (compact ? 22 : 28),
+          fontSize: veryCompact ? 16 : (compact ? 20 : 24),
           fontWeight: FontWeight.w800,
           color: AppColors.dark,
         );
@@ -130,7 +219,7 @@ class StatCard extends StatelessWidget {
           padding: EdgeInsets.all(padding),
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withOpacity(0.07),
@@ -218,12 +307,14 @@ class PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final Color bgColor;
+  final bool compact;
 
   const PrimaryButton(
       {super.key,
       required this.label,
       this.onPressed,
-      this.bgColor = AppColors.dark});
+      this.bgColor = AppColors.dark,
+      this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -234,25 +325,16 @@ class PrimaryButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: bgColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: EdgeInsets.symmetric(
+              horizontal: compact ? 12 : 16, vertical: compact ? 8 : 10),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label,
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-            Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                  color: AppColors.green, shape: BoxShape.circle),
-              child: const Icon(Icons.arrow_forward,
-                  color: Colors.white, size: 16),
-            ),
-          ],
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              fontSize: compact ? 12 : 13, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -313,7 +395,7 @@ class PillButton extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(30),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: outlined
               ? BoxDecoration(
                   borderRadius: BorderRadius.circular(30),
@@ -323,12 +405,12 @@ class PillButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 13, color: fgColor),
-                const SizedBox(width: 5)
+                Icon(icon, size: 12, color: fgColor),
+                const SizedBox(width: 4)
               ],
               Text(label,
                   style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: fgColor)),
             ],
@@ -385,7 +467,7 @@ class SmallButton extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: outlined
               ? BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
@@ -395,12 +477,12 @@ class SmallButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 11, color: fgColor),
+                Icon(icon, size: 10, color: fgColor),
                 const SizedBox(width: 4)
               ],
               Text(label,
                   style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: FontWeight.w600,
                       color: fgColor)),
             ],
@@ -434,7 +516,7 @@ class ChipSelector extends StatelessWidget {
           onTap: () => onSelected(i),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
             decoration: BoxDecoration(
               color: isOn ? AppColors.dark : AppColors.white,
               borderRadius: BorderRadius.circular(30),
@@ -444,7 +526,7 @@ class ChipSelector extends StatelessWidget {
             child: Text(
               options[i],
               style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w500,
                   color: isOn ? Colors.white : AppColors.muted),
             ),
@@ -515,7 +597,7 @@ class ToggleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Expanded(
@@ -524,7 +606,7 @@ class ToggleRow extends StatelessWidget {
               children: [
                 Text(label,
                     style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500)),
+                        fontSize: 12, fontWeight: FontWeight.w500)),
                 if (subtitle != null)
                   Text(subtitle!,
                       style: const TextStyle(
@@ -547,7 +629,7 @@ class SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 10),
+      padding: const EdgeInsets.only(top: 14, bottom: 8),
       child: Text(
         label.toUpperCase(),
         style: const TextStyle(
@@ -592,15 +674,15 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: margin ?? const EdgeInsets.only(bottom: 16),
-      padding: padding ?? const EdgeInsets.all(20),
+      margin: margin ?? const EdgeInsets.only(bottom: 12),
+      padding: padding ?? const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.07),
-              blurRadius: 14,
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
               offset: const Offset(0, 2))
         ],
       ),
@@ -629,7 +711,7 @@ class PrefixInput extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: const BoxDecoration(
               color: AppColors.bg2,
               border: Border(
@@ -640,7 +722,7 @@ class PrefixInput extends StatelessWidget {
             ),
             child: Text(prefix,
                 style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppColors.dark2)),
           ),
@@ -651,7 +733,7 @@ class PrefixInput extends StatelessWidget {
                 hintText: hint,
                 border: InputBorder.none,
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
               ),
@@ -681,9 +763,9 @@ class UploadZone extends StatelessWidget {
       onTap: () {},
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(30),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
               color: AppColors.border,
               width: 2,
@@ -691,7 +773,7 @@ class UploadZone extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, size: 36, color: AppColors.muted2),
+            Icon(icon, size: 30, color: AppColors.muted2),
             const SizedBox(height: 8),
             Text(label,
                 style: const TextStyle(

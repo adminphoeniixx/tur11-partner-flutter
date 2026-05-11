@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // ✅ ADD
-import 'firebase_options.dart'; // ✅ ADD
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 import 'theme/app_theme.dart';
 import 'screens/auth_screens.dart';
 import 'screens/app_shell.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // ✅ required
+  WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Firebase initialize
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -23,7 +23,7 @@ class Turf11App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Turf11 — Owner & Organizer Panel',
+      title: 'Turf11 Partner',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       home: const Turf11Root(),
@@ -39,8 +39,7 @@ class Turf11Root extends StatefulWidget {
 }
 
 class _Turf11RootState extends State<Turf11Root> {
-  /// Auth flow: 'login' | 'otp' | 'register' | 'app'
-  String _authState = 'login';
+  String _authState = 'splash';
 
   void _showAuth(String page) {
     setState(() => _authState = page);
@@ -49,6 +48,8 @@ class _Turf11RootState extends State<Turf11Root> {
   @override
   Widget build(BuildContext context) {
     switch (_authState) {
+      case 'splash':
+        return SplashScreen(onDone: () => _showAuth('login'));
       case 'login':
         return LoginScreen(
           onOtp: () => _showAuth('otp'),

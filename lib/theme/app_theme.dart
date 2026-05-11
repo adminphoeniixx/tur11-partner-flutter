@@ -56,7 +56,7 @@ class AppTheme {
           elevation: 2,
           shadowColor: Colors.black.withOpacity(0.07),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
 
@@ -64,26 +64,26 @@ class AppTheme {
           filled: true,
           fillColor: AppColors.white,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
 
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide:
                 const BorderSide(color: AppColors.border, width: 1.5),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide:
                 const BorderSide(color: AppColors.border, width: 1.5),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide:
                 const BorderSide(color: AppColors.green, width: 1.5),
           ),
 
           hintStyle:
-              GoogleFonts.dmSans(color: AppColors.muted2, fontSize: 14),
+              GoogleFonts.dmSans(color: AppColors.muted2, fontSize: 13),
 
           labelStyle: GoogleFonts.dmSans(
             fontSize: 11,
@@ -101,9 +101,9 @@ class AppTheme {
               borderRadius: BorderRadius.circular(40),
             ),
             padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
             textStyle: GoogleFonts.dmSans(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
             elevation: 0, // ✅ smoother UI
