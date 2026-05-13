@@ -1,21 +1,75 @@
 import 'package:flutter/material.dart';
+import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
-  final VoidCallback onOtp;
+  final AuthController authController;
+  final String? initialPhone;
+  final ValueChanged<String> onOtp;
   final VoidCallback onRegister;
-  const LoginScreen({super.key, required this.onOtp, required this.onRegister});
+  const LoginScreen({
+    super.key,
+    required this.authController,
+    this.initialPhone,
+    required this.onOtp,
+    required this.onRegister,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  int _roleIndex = 0;
+  final TextEditingController _phoneController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController.text = widget.initialPhone ?? '';
+    widget.authController.addListener(_onAuthChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.authController.removeListener(_onAuthChanged);
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  void _onAuthChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _sendOtp() async {
+    final phone = _phoneController.text.trim();
+    if (phone.length < 10) {
+      _showMessage('Enter a valid mobile number.');
+      return;
+    }
+
+    final success = await widget.authController.sendOtp(
+      phone: phone,
+    );
+    if (!mounted) return;
+
+    if (success) {
+      widget.onOtp(phone);
+    } else {
+      _showMessage(widget.authController.errorMessage ?? 'Unable to send OTP.');
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isLoading = widget.authController.isLoading;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -45,21 +99,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                       fontSize: 14, color: AppColors.muted, height: 1.4)),
               const SizedBox(height: 18),
-              const FieldLabel('Role'),
-              ChipSelector(
-                options: const ['Turf Owner', 'Organizer', 'Both'],
-                selected: _roleIndex,
-                onSelected: (i) => setState(() => _roleIndex = i),
-              ),
-              const SizedBox(height: 18),
               const FieldLabel('Mobile Number'),
-              const PrefixInput(
+              PrefixInput(
                 prefix: '+91',
                 hint: 'Enter mobile number',
                 keyboardType: TextInputType.phone,
+                controller: _phoneController,
               ),
               const SizedBox(height: 16),
-              PrimaryButton(label: 'Get OTP', onPressed: widget.onOtp),
+              PrimaryButton(
+                label: isLoading ? 'Sending OTP...' : 'Get OTP',
+                onPressed: isLoading ? null : _sendOtp,
+              ),
               const SizedBox(height: 18),
               Center(
                 child: TextButton(

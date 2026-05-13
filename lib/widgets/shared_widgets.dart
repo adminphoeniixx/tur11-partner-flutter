@@ -696,9 +696,14 @@ class PrefixInput extends StatelessWidget {
   final String prefix;
   final String hint;
   final TextInputType? keyboardType;
+  final TextEditingController? controller;
 
   const PrefixInput(
-      {super.key, required this.prefix, required this.hint, this.keyboardType});
+      {super.key,
+      required this.prefix,
+      required this.hint,
+      this.keyboardType,
+      this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -728,6 +733,7 @@ class PrefixInput extends StatelessWidget {
           ),
           Expanded(
             child: TextField(
+              controller: controller,
               keyboardType: keyboardType,
               decoration: InputDecoration(
                 hintText: hint,

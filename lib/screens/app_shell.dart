@@ -350,11 +350,37 @@ class _MoreScreen extends StatelessWidget {
             label: 'Logout',
             icon: Icons.logout,
             color: AppColors.red,
-            onTap: onLogout,
+            onTap: () => _confirmLogout(context),
           ),
         ),
       ]),
     );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Logout?'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout == true) {
+      onLogout();
+    }
   }
 
   Widget _group(String title, List<_MoreItem> items) {
