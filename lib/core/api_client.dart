@@ -160,7 +160,7 @@ class ApiClient {
   }) {
     debugPrint('========== API REQUEST ==========');
     debugPrint('Method: $method');
-    debugPrint('URL: ${dio.options.baseUrl}$url');
+    debugPrint('URL: ${_fullUrl(url)}');
     if (headers != null && headers.isNotEmpty) {
       debugPrint('Headers: ${_pretty(headers)}');
     }
@@ -180,7 +180,7 @@ class ApiClient {
   }) {
     debugPrint('========== API RESPONSE =========');
     debugPrint('Method: $method');
-    debugPrint('URL: ${dio.options.baseUrl}$url');
+    debugPrint('URL: ${_fullUrl(url)}');
     debugPrint('Status: ${response.statusCode}');
     debugPrint('Response: ${_pretty(response.data)}');
     debugPrint('=================================');
@@ -193,7 +193,7 @@ class ApiClient {
   }) {
     debugPrint('=========== API ERROR ===========');
     debugPrint('Method: $method');
-    debugPrint('URL: ${dio.options.baseUrl}$url');
+    debugPrint('URL: ${_fullUrl(url)}');
     debugPrint('Status: ${error.response?.statusCode ?? 'NO_STATUS'}');
     debugPrint('Message: ${error.message}');
     if (error.response?.data != null) {
@@ -212,6 +212,11 @@ class ApiClient {
     } catch (_) {
       return value.toString();
     }
+  }
+
+  static String _fullUrl(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return '${dio.options.baseUrl}$url';
   }
 
   static ApiException _toApiException(DioException error) {

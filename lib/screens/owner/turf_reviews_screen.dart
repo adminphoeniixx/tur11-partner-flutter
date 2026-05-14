@@ -1,72 +1,133 @@
 import 'package:flutter/material.dart';
+
+import '../../controllers/review_controller.dart';
+import '../../models/review_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 
-class TurfReviewsScreen extends StatelessWidget {
+class TurfReviewsScreen extends StatefulWidget {
   const TurfReviewsScreen({super.key});
 
   @override
+  State<TurfReviewsScreen> createState() => _TurfReviewsScreenState();
+}
+
+class _TurfReviewsScreenState extends State<TurfReviewsScreen> {
+  final ReviewController _controller = ReviewController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onReviewsChanged);
+    _controller.load();
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onReviewsChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onReviewsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Turf Reviews',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 3),
-        const Text('Player feedback across all your turfs',
-            style: TextStyle(fontSize: 12, color: AppColors.muted)),
-        const SizedBox(height: 14),
-        AppCard(
-            padding: const EdgeInsets.all(12),
-            child: Column(children: [
-              const Text('4.2',
-                  style: TextStyle(fontSize: 46, fontWeight: FontWeight.w800)),
-              const StarRating(rating: 4.2, size: 16),
-              const SizedBox(height: 4),
-              const Text('Based on 128 reviews',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted)),
-              const SizedBox(height: 16),
-              _ratingBar(5, 0.60, 77),
-              _ratingBar(4, 0.25, 32),
-              _ratingBar(3, 0.09, 12),
-              _ratingBar(2, 0.04, 5),
-              _ratingBar(1, 0.02, 2),
-              const Divider(color: AppColors.border, height: 24),
-              _catRow('Pitch Quality', 4.5),
-              _catRow('Facilities', 4.1),
-              _catRow('Cleanliness', 4.3),
-              _catRow('Value for Money', 3.9),
-            ])),
-        AppCard(
-          padding: const EdgeInsets.all(12),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('All Reviews',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 14),
-            _reviewItem(
-              initials: 'MK',
-              name: 'Mohit Kumar',
-              meta: 'Apr 6 - DLF Arena - Cricket 8v8',
-              stars: 4,
-              text:
-                  'Best cricket box in Gurugram. Super clean pitch and great lighting. Parking could be better but overall excellent.',
-              tags: ['Great Pitch', 'Clean', 'Good Lighting'],
+    final summary = _controller.summary;
+    final reviews = _controller.turfReviews;
+
+    return RefreshIndicator(
+      onRefresh: _controller.load,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Turf Reviews',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 3),
+          const Text('Player feedback across all your turfs',
+              style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          if (_controller.errorMessage != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _controller.errorMessage!,
+              style: const TextStyle(color: AppColors.red, fontSize: 12),
             ),
-            const Divider(color: AppColors.border),
-            _reviewItem(
-              initials: 'SA',
-              name: 'Sahil Arora',
-              meta: 'Apr 3 - DLF Arena - Cricket T10',
-              stars: 3,
-              text:
-                  'Good turf. Changing rooms need more space for a full team. The pitch is well maintained though.',
-              tags: const [],
+          ],
+          const SizedBox(height: 14),
+          _summaryCard(summary),
+          SizedBox(
+            width: double.infinity,
+            child: AppCard(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('All Reviews',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 14),
+                    if (_controller.isLoading && reviews.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(18),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (reviews.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'No reviews found.',
+                          style:
+                              TextStyle(fontSize: 12, color: AppColors.muted),
+                        ),
+                      )
+                    else
+                      ...List.generate(reviews.length, (index) {
+                        return Column(children: [
+                          _reviewItem(reviews[index]),
+                          if (index != reviews.length - 1)
+                            const Divider(color: AppColors.border),
+                        ]);
+                      }),
+                  ]),
             ),
-          ]),
-        ),
-      ]),
+          ),
+        ]),
+      ),
     );
+  }
+
+  Widget _summaryCard(ReviewSummary summary) {
+    final total = summary.totalReviews == 0 ? 1 : summary.totalReviews;
+
+    return AppCard(
+        padding: const EdgeInsets.all(12),
+        child: Column(children: [
+          Text(summary.averageRating.toStringAsFixed(1),
+              style:
+                  const TextStyle(fontSize: 46, fontWeight: FontWeight.w800)),
+          StarRating(rating: summary.averageRating, size: 16),
+          const SizedBox(height: 4),
+          Text('Based on ${summary.totalReviews} reviews',
+              style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 16),
+          ...List.generate(5, (index) {
+            final star = 5 - index;
+            final count = summary.ratingCounts[star] ?? 0;
+            return _ratingBar(star, count / total, count);
+          }),
+          if (summary.categories.isNotEmpty) ...[
+            const Divider(color: AppColors.border, height: 24),
+            ...summary.categories.entries
+                .map((entry) => _catRow(entry.key, entry.value)),
+          ],
+        ]));
   }
 
   Widget _ratingBar(int star, double pct, int count) {
@@ -96,61 +157,110 @@ class TurfReviewsScreen extends StatelessWidget {
         Expanded(child: Text(name, style: const TextStyle(fontSize: 12))),
         const Icon(Icons.star, size: 12, color: AppColors.green),
         const SizedBox(width: 3),
-        Text(rating.toString(),
+        Text(rating.toStringAsFixed(1),
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
       ]),
     );
   }
 
-  Widget _reviewItem({
-    required String initials,
-    required String name,
-    required String meta,
-    required int stars,
-    required String text,
-    required List<String> tags,
-  }) {
+  Widget _reviewItem(ReviewItem review) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           AppAvatar(
-              initials: initials, bg: AppColors.greenLt, fg: AppColors.green),
+              initials: review.initials,
+              bg: AppColors.greenLt,
+              fg: AppColors.green),
           const SizedBox(width: 10),
           Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text(name,
+                Text(review.reviewerName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w800)),
-                Text(meta,
+                Text(review.meta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style:
                         const TextStyle(fontSize: 11, color: AppColors.muted)),
               ])),
-          StarRating(rating: stars.toDouble()),
+          const SizedBox(width: 8),
+          Flexible(
+            flex: 0,
+            child: StarRating(rating: review.rating),
+          ),
         ]),
         const SizedBox(height: 8),
-        Text(text,
+        Text(review.text,
+            softWrap: true,
             style: const TextStyle(
                 fontSize: 13, color: AppColors.dark2, height: 1.55)),
-        if (tags.isNotEmpty) ...[
+        if (review.tags.isNotEmpty) ...[
           const SizedBox(height: 8),
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: tags.map((tag) => AppBadge.green(tag)).toList(),
+            children: review.tags.map((tag) => AppBadge.green(tag)).toList(),
           ),
         ],
+        if (review.reply != null && review.reply!.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text('Reply: ${review.reply}',
+              softWrap: true,
+              style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        ],
         const SizedBox(height: 8),
-        SmallButton.ghost('Reply', icon: Icons.chat_bubble_outline),
+        SmallButton.ghost(
+          _controller.isSaving ? 'Saving...' : 'Reply',
+          icon: Icons.chat_bubble_outline,
+          onPressed:
+              review.id == null || _controller.isSaving ? null : () => _reply(review),
+        ),
       ]),
     );
   }
+
+  Future<void> _reply(ReviewItem review) async {
+    final textController = TextEditingController(text: review.reply ?? '');
+    final reply = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Reply to Review'),
+          content: TextField(
+            controller: textController,
+            maxLines: 4,
+            decoration: const InputDecoration(hintText: 'Write your reply'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, textController.text),
+              child: const Text('Send'),
+            ),
+          ],
+        );
+      },
+    );
+    textController.dispose();
+
+    if (reply == null || reply.trim().isEmpty || review.id == null) return;
+    final saved = await _controller.replyToReview(review.id!, reply);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(saved
+            ? 'Reply saved.'
+            : _controller.errorMessage ?? 'Unable to save reply.'),
+        backgroundColor: saved ? AppColors.green : AppColors.red,
+      ),
+    );
+  }
 }
-
-
-
-

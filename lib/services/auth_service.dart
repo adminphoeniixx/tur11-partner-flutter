@@ -12,14 +12,14 @@ class AuthService {
 
   Future<AuthResponse> resendOtp(ResendOtpRequest request) {
     return _post(
-      ApiConstants.resendOtp,
+      ApiConstants.sendOtp,
       body: request.toJson(),
     );
   }
 
-  Future<AuthResponse> login(LoginRequest request) {
+  Future<AuthResponse> verifyOtp(VerifyOtpRequest request) {
     return _post(
-      ApiConstants.login,
+      ApiConstants.verifyOtp,
       body: request.toJson(),
     );
   }

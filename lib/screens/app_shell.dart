@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../controllers/profile_controller.dart';
+import '../models/profile_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'dashboard_screen.dart';
@@ -16,6 +18,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   String _currentScreen = 'dashboard';
   final List<String> _history = [];
+  final ProfileController _profileController = ProfileController();
 
   static const Set<String> _rootScreens = {
     'dashboard',
@@ -26,6 +29,25 @@ class _AppShellState extends State<AppShell> {
   };
 
   bool get _canGoBack => _history.isNotEmpty && !_rootScreens.contains(_currentScreen);
+  OwnerProfile? get _profile => _profileController.profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileController.addListener(_onProfileChanged);
+    _profileController.loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _profileController.removeListener(_onProfileChanged);
+    _profileController.dispose();
+    super.dispose();
+  }
+
+  void _onProfileChanged() {
+    if (mounted) setState(() {});
+  }
 
   void _navigate(String screen, {bool root = false}) {
     if (screen == _currentScreen) return;
@@ -81,7 +103,7 @@ class _AppShellState extends State<AppShell> {
   Widget _buildScreen() {
     switch (_currentScreen) {
       case 'dashboard':
-        return DashboardScreen(onNavigate: _navigate);
+        return DashboardScreen(onNavigate: _navigate, profile: _profile);
       case 'notifications':
         return const NotificationsScreen();
       case 'my_turfs':
@@ -107,15 +129,19 @@ class _AppShellState extends State<AppShell> {
       case 'cancellations':
         return const CancellationsScreen();
       case 'profile':
-        return const ProfileScreen();
+        return ProfileScreen(controller: _profileController);
       case 'verify':
         return const VerificationScreen();
       case 'terms':
         return const TermsScreen();
       case 'more':
-        return _MoreScreen(onNavigate: _navigate, onLogout: widget.onLogout);
+        return _MoreScreen(
+          onNavigate: _navigate,
+          onLogout: widget.onLogout,
+          profile: _profile,
+        );
       default:
-        return DashboardScreen(onNavigate: _navigate);
+        return DashboardScreen(onNavigate: _navigate, profile: _profile);
     }
   }
 
@@ -208,8 +234,8 @@ class _AppShellState extends State<AppShell> {
             const SizedBox(width: 8),
             GestureDetector(
               onTap: () => _navigate('profile'),
-              child: const AppAvatar(
-                initials: 'VS',
+              child: AppAvatar(
+                initials: _profile?.initials ?? 'TO',
                 size: 32,
                 bg: AppColors.dark,
               ),
@@ -300,8 +326,13 @@ class _AppShellState extends State<AppShell> {
 class _MoreScreen extends StatelessWidget {
   final ValueChanged<String> onNavigate;
   final VoidCallback onLogout;
+  final OwnerProfile? profile;
 
-  const _MoreScreen({required this.onNavigate, required this.onLogout});
+  const _MoreScreen({
+    required this.onNavigate,
+    required this.onLogout,
+    this.profile,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -311,18 +342,23 @@ class _MoreScreen extends StatelessWidget {
         AppCard(
           padding: const EdgeInsets.all(12),
           child: Row(children: [
-            const AppAvatar(initials: 'VS', size: 46, bg: AppColors.dark),
+            AppAvatar(
+              initials: profile?.initials ?? 'TO',
+              size: 46,
+              bg: AppColors.dark,
+            ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Vikram Singh',
+                Text(profile?.displayName ?? 'Owner',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 3),
+                Text(_subtitle(profile),
                     style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-                SizedBox(height: 3),
-                Text('Turf Owner - Gurugram',
-                    style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                        const TextStyle(fontSize: 12, color: AppColors.muted)),
               ]),
             ),
             IconButton(
@@ -355,6 +391,12 @@ class _MoreScreen extends StatelessWidget {
         ),
       ]),
     );
+  }
+
+  String _subtitle(OwnerProfile? profile) {
+    final city = profile?.city?.trim();
+    if (city == null || city.isEmpty) return 'Turf Owner';
+    return 'Turf Owner - $city';
   }
 
   Future<void> _confirmLogout(BuildContext context) async {

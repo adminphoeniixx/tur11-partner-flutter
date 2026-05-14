@@ -89,7 +89,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           .where((sport) => sport.isNotEmpty)
           .toList(),
       gstNumber: _gstController.text.trim(),
-      otp: '',
     );
 
     if (request.firstName.isEmpty ||
@@ -97,9 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         request.businessName.isEmpty ||
         request.phone.length < 10 ||
         request.email.isEmpty ||
-        request.city.isEmpty ||
-        request.state.isEmpty ||
-        request.sports.isEmpty) {
+        request.city.isEmpty) {
       _showMessage('Please fill all required fields.');
       return;
     }

@@ -61,11 +61,17 @@ class _OtpScreenState extends State<OtpScreen> {
     }
 
     final pendingRegistration = widget.pendingRegistration;
-    final success = pendingRegistration == null
-        ? await widget.authController.login(phone: widget.phone, otp: otp)
-        : await widget.authController.registerOwner(
-            pendingRegistration.copyWith(otp: otp),
-          );
+    final verified = await widget.authController.verifyOtp(
+      phone: widget.phone,
+      otp: otp,
+    );
+    final bool success;
+    if (pendingRegistration == null) {
+      success = verified && widget.authController.isAuthenticated;
+    } else {
+      success =
+          verified && await widget.authController.registerOwner(pendingRegistration);
+    }
     if (!mounted) return;
 
     if (success) {

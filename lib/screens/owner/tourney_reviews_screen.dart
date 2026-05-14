@@ -1,94 +1,143 @@
 import 'package:flutter/material.dart';
+
+import '../../controllers/review_controller.dart';
+import '../../models/review_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 
-class TourneyReviewsScreen extends StatelessWidget {
+class TourneyReviewsScreen extends StatefulWidget {
   const TourneyReviewsScreen({super.key});
 
   @override
+  State<TourneyReviewsScreen> createState() => _TourneyReviewsScreenState();
+}
+
+class _TourneyReviewsScreenState extends State<TourneyReviewsScreen> {
+  final ReviewController _controller = ReviewController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onReviewsChanged);
+    _controller.load();
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onReviewsChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onReviewsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Tournament Reviews',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 3),
-        const Text('Team feedback for your tournaments',
-            style: TextStyle(fontSize: 12, color: AppColors.muted)),
-        const SizedBox(height: 14),
-        AppCard(
-          padding: const EdgeInsets.all(12),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Team Reviews',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 14),
-            _review(
-              initials: 'GX',
-              avBg: AppColors.amberLt,
-              avFg: AppColors.amber,
-              name: 'Galaxy XI',
-              meta: 'Apr 22 - Finished 3rd',
-              stars: 5,
-              text:
-                  'Fantastic event. Well organised with fair umpiring throughout. Will definitely join next season.',
+    final reviews = _controller.tournamentReviews;
+
+    return RefreshIndicator(
+      onRefresh: _controller.load,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Tournament Reviews',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 3),
+          const Text('Team feedback for your tournaments',
+              style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          if (_controller.errorMessage != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _controller.errorMessage!,
+              style: const TextStyle(color: AppColors.red, fontSize: 12),
             ),
-            const Divider(color: AppColors.border),
-            _review(
-              initials: 'S9',
-              avBg: AppColors.greenLt,
-              avFg: AppColors.green,
-              name: 'Sector 9 Strikers',
-              meta: 'Apr 21 - Runners-up',
-              stars: 4,
-              text:
-                  'Good event but scheduling was chaotic on day 3. Prize money was paid within 2 days though.',
+          ],
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: AppCard(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Team Reviews',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 14),
+                    if (_controller.isLoading && reviews.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(18),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (reviews.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'No tournament reviews found.',
+                          style:
+                              TextStyle(fontSize: 12, color: AppColors.muted),
+                        ),
+                      )
+                    else
+                      ...List.generate(reviews.length, (index) {
+                        return Column(children: [
+                          _review(reviews[index]),
+                          if (index != reviews.length - 1)
+                            const Divider(color: AppColors.border),
+                        ]);
+                      }),
+                  ]),
             ),
-          ]),
-        ),
-      ]),
+          ),
+        ]),
+      ),
     );
   }
 
-  Widget _review({
-    required String initials,
-    required Color avBg,
-    required Color avFg,
-    required String name,
-    required String meta,
-    required int stars,
-    required String text,
-  }) {
+  Widget _review(ReviewItem review) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          AppAvatar(initials: initials, bg: avBg, fg: avFg),
+          AppAvatar(
+              initials: review.initials,
+              bg: AppColors.amberLt,
+              fg: AppColors.amber),
           const SizedBox(width: 10),
           Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text(name,
+                Text(review.reviewerName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w800)),
-                Text(meta,
+                Text(review.meta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style:
                         const TextStyle(fontSize: 11, color: AppColors.muted)),
               ])),
-          StarRating(rating: stars.toDouble()),
+          const SizedBox(width: 8),
+          Flexible(
+            flex: 0,
+            child: StarRating(rating: review.rating),
+          ),
         ]),
         const SizedBox(height: 8),
-        Text(text,
+        Text(review.text,
+            softWrap: true,
             style: const TextStyle(
                 fontSize: 13, color: AppColors.dark2, height: 1.55)),
       ]),
     );
   }
 }
-
-
-
-

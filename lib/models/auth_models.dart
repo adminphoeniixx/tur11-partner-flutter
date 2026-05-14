@@ -1,6 +1,4 @@
 class SendOtpRequest {
-  static const String ownerRole = 'turf_owner';
-
   final String phone;
 
   const SendOtpRequest({
@@ -10,24 +8,23 @@ class SendOtpRequest {
   Map<String, dynamic> toJson() {
     return {
       'phone': phone.trim(),
-      'role': ownerRole,
     };
   }
 }
 
-class LoginRequest {
+class VerifyOtpRequest {
   final String phone;
   final String otp;
 
-  const LoginRequest({
+  const VerifyOtpRequest({
     required this.phone,
     required this.otp,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'phone': phone,
-      'otp': otp,
+      'phone': phone.trim(),
+      'otp': otp.trim(),
     };
   }
 }
@@ -47,7 +44,7 @@ class ResendOtpRequest {
 }
 
 class RegisterOwnerRequest {
-  static const String ownerRole = 'turf_owner';
+  static const String ownerRole = 'both';
 
   final String firstName;
   final String lastName;
@@ -58,7 +55,6 @@ class RegisterOwnerRequest {
   final String state;
   final List<String> sports;
   final String? gstNumber;
-  final String otp;
 
   const RegisterOwnerRequest({
     required this.firstName,
@@ -68,30 +64,22 @@ class RegisterOwnerRequest {
     required this.email,
     required this.city,
     required this.state,
-    required this.sports,
+    this.sports = const [],
     this.gstNumber,
-    required this.otp,
   });
 
   Map<String, dynamic> toJson() {
-    final fullName = [firstName.trim(), lastName.trim()]
-        .where((part) => part.isNotEmpty)
-        .join(' ');
-
     return {
-      'name': fullName,
       'first_name': firstName.trim(),
       'last_name': lastName.trim(),
       'business_name': businessName.trim(),
       'phone': phone.trim(),
       'email': email.trim(),
       'city': city.trim(),
-      'state': state.trim(),
-      'sports': sports,
+      if (state.trim().isNotEmpty) 'state': state.trim(),
       'role': ownerRole,
       if (gstNumber != null && gstNumber!.trim().isNotEmpty)
         'gst_number': gstNumber!.trim(),
-      'otp': otp.trim(),
     };
   }
 
@@ -105,7 +93,6 @@ class RegisterOwnerRequest {
     String? state,
     List<String>? sports,
     String? gstNumber,
-    String? otp,
   }) {
     return RegisterOwnerRequest(
       firstName: firstName ?? this.firstName,
@@ -117,7 +104,6 @@ class RegisterOwnerRequest {
       state: state ?? this.state,
       sports: sports ?? this.sports,
       gstNumber: gstNumber ?? this.gstNumber,
-      otp: otp ?? this.otp,
     );
   }
 }
@@ -126,24 +112,42 @@ class AuthResponse {
   final String? message;
   final String? token;
   final AuthUser? user;
+  final bool? verified;
+  final bool? isRegistered;
   final Map<String, dynamic> data;
 
   const AuthResponse({
     this.message,
     this.token,
     this.user,
+    this.verified,
+    this.isRegistered,
     this.data = const {},
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     final nestedData = _asMap(json['data']);
     final source = nestedData.isEmpty ? json : {...json, ...nestedData};
-    final userJson = _asMap(source['user']);
+    final userJson = _firstPresentMap(source, const [
+      'user',
+      'owner',
+      'profile',
+      'turf_owner',
+      'turfOwner',
+      'partner',
+    ]);
 
     return AuthResponse(
       message: source['message']?.toString(),
-      token: source['token']?.toString(),
+      token: _firstPresentString(source, const [
+        'token',
+        'access_token',
+        'accessToken',
+        'bearer_token',
+      ]),
       user: userJson.isEmpty ? null : AuthUser.fromJson(userJson),
+      verified: _asBool(source['verified'] ?? source['success']),
+      isRegistered: _asBool(source['is_registered'] ?? source['isRegistered']),
       data: json,
     );
   }
@@ -200,8 +204,40 @@ Map<String, dynamic> _asMap(Object? value) {
   return {};
 }
 
+Map<String, dynamic> _firstPresentMap(
+  Map<String, dynamic> source,
+  List<String> keys,
+) {
+  for (final key in keys) {
+    final mapped = _asMap(source[key]);
+    if (mapped.isNotEmpty) return mapped;
+  }
+  return {};
+}
+
+String? _firstPresentString(Map<String, dynamic> source, List<String> keys) {
+  for (final key in keys) {
+    final value = source[key]?.toString().trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
 int? _asInt(Object? value) {
   if (value is int) return value;
   if (value == null) return null;
   return int.tryParse(value.toString());
+}
+
+bool? _asBool(Object? value) {
+  if (value is bool) return value;
+  if (value == null) return null;
+  final normalized = value.toString().toLowerCase();
+  if (normalized == '1' || normalized == 'true' || normalized == 'yes') {
+    return true;
+  }
+  if (normalized == '0' || normalized == 'false' || normalized == 'no') {
+    return false;
+  }
+  return null;
 }

@@ -62,10 +62,28 @@ class AuthController extends ChangeNotifier {
     required String otp,
   }) {
     return _run(() async {
-      final response = await _authService.login(
-        LoginRequest(phone: phone, otp: otp),
+      final response = await _authService.verifyOtp(
+        VerifyOtpRequest(phone: phone, otp: otp),
       );
       await _setSession(response);
+    });
+  }
+
+  Future<bool> verifyOtp({
+    required String phone,
+    required String otp,
+  }) {
+    return _run(() async {
+      final response = await _authService.verifyOtp(
+        VerifyOtpRequest(phone: phone, otp: otp),
+      );
+      _lastResponse = response;
+      if (response.verified != true) {
+        throw ApiException(response.message ?? 'OTP verification failed.');
+      }
+      if (response.token != null && response.token!.trim().isNotEmpty) {
+        await _setSession(response);
+      }
     });
   }
 

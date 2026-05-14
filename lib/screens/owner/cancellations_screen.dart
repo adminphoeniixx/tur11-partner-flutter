@@ -1,52 +1,99 @@
 import 'package:flutter/material.dart';
+
+import '../../controllers/booking_controller.dart';
+import '../../models/booking_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 
-class CancellationsScreen extends StatelessWidget {
+class CancellationsScreen extends StatefulWidget {
   const CancellationsScreen({super.key});
 
   @override
+  State<CancellationsScreen> createState() => _CancellationsScreenState();
+}
+
+class _CancellationsScreenState extends State<CancellationsScreen> {
+  final CancellationController _controller = CancellationController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onCancellationsChanged);
+    _controller.load();
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onCancellationsChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onCancellationsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Cancellations & Refunds',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 3),
-        const Text('Track cancellations and process refunds',
-            style: TextStyle(fontSize: 12, color: AppColors.muted)),
-        const SizedBox(height: 14),
-        _stats(),
-        const SizedBox(height: 16),
-        AppCard(
+    return RefreshIndicator(
+      onRefresh: _controller.load,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Cancellations & Refunds',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 3),
+          const Text('Track cancellations and process refunds',
+              style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          if (_controller.errorMessage != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _controller.errorMessage!,
+              style: const TextStyle(color: AppColors.red, fontSize: 12),
+            ),
+          ],
+          const SizedBox(height: 14),
+          _stats(),
+          const SizedBox(height: 16),
+          AppCard(
             padding: const EdgeInsets.all(12),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Cancellation Log',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               const SizedBox(height: 14),
-              _cancelCard('#T11-4818', 'Sahil Rawat', 'CyberHub Arena',
-                  'Apr 6, 6:00 PM', '2 hrs before', AppColors.redLt,
-                  AppColors.red, 'Rs 0 (no refund)', AppColors.red,
-                  StatusType.completed, 'Processed'),
-              _cancelCard('#T11-4810', 'Priya Kapoor', 'DLF Arena',
-                  'Apr 5, 10:00 AM', '14 hrs before', AppColors.amberLt,
-                  AppColors.amber, 'Rs 600 (50%)', AppColors.amber,
-                  StatusType.active, 'Refunded'),
-              _cancelCard('#T11-4802', 'Mohit Jain', 'Sector 56 Box',
-                  'Apr 4, 9:00 AM', '36 hrs before', AppColors.greenLt,
-                  AppColors.green, 'Rs 1,200 (full)', AppColors.green,
-                  StatusType.active, 'Refunded'),
-              _cancelCard('#T11-4795', 'Karan Malhotra', 'DLF Arena',
-                  'Apr 3, 4:00 PM', '1 hr before', AppColors.redLt,
-                  AppColors.red, 'Rs 0 + Rs 50 penalty', AppColors.red,
-                  StatusType.pending, 'Processing'),
-            ])),
-      ]),
+              if (_controller.isLoading && _controller.cancellations.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(18),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (_controller.cancellations.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    'No cancellations found.',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
+                )
+              else
+                ..._controller.cancellations.map(_cancelFromApi),
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 
   Widget _stats() {
+    final total = _controller.cancellations.length;
+    final pending = _controller.cancellations
+        .where((item) => item.status.toLowerCase().contains('pending') ||
+            item.status.toLowerCase().contains('process'))
+        .length;
+
     return LayoutBuilder(builder: (context, constraints) {
       final count = constraints.maxWidth < 360 ? 1 : 2;
       return GridView.count(
@@ -56,31 +103,51 @@ class CancellationsScreen extends StatelessWidget {
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
         childAspectRatio: constraints.maxWidth < 360 ? 2.4 : 1.75,
-        children: const [
+        children: [
           StatCard(
               label: 'Cancellations',
-              value: '32',
-              change: '6.6% of bookings',
+              value: total.toString(),
+              change: 'All cancellations',
               isUp: false),
-          StatCard(
+          const StatCard(
               label: 'Refunds Issued',
-              value: 'Rs 14,200',
-              change: 'Auto-processed',
+              value: 'Rs 0',
+              change: 'From API log',
               isUp: false,
               changeColor: AppColors.muted),
-          StatCard(
+          const StatCard(
               label: 'Penalties',
-              value: 'Rs 2,400',
-              change: '48 no-shows'),
+              value: 'Rs 0',
+              change: 'From API log'),
           StatCard(
               label: 'Pending Refunds',
-              value: 'Rs 3,600',
-              change: '4 pending',
+              value: pending.toString(),
+              change: 'Pending',
               isUp: false,
               changeColor: AppColors.amber),
         ],
       );
     });
+  }
+
+  Widget _cancelFromApi(CancellationItem item) {
+    final status = _statusType(item.status);
+    final beforeColor = _beforeColor(item.cancelledBefore);
+    final refundColor = _refundColor(item.refund);
+
+    return _cancelCard(
+      item.id.startsWith('#') ? item.id : '#${item.id}',
+      item.customerName,
+      item.turfName,
+      item.time,
+      item.cancelledBefore,
+      beforeColor.withOpacity(0.12),
+      beforeColor,
+      item.refund,
+      refundColor,
+      status,
+      _statusLabel(item.status),
+    );
   }
 
   Widget _cancelCard(
@@ -132,8 +199,39 @@ class CancellationsScreen extends StatelessWidget {
       ]),
     );
   }
+
+  StatusType _statusType(String status) {
+    final normalized = status.toLowerCase();
+    if (normalized.contains('pending') || normalized.contains('process')) {
+      return StatusType.pending;
+    }
+    if (normalized.contains('cancel')) return StatusType.cancelled;
+    return StatusType.active;
+  }
+
+  Color _beforeColor(String before) {
+    final number = int.tryParse(RegExp(r'\d+').firstMatch(before)?.group(0) ?? '');
+    if (number == null) return AppColors.amber;
+    if (number >= 24) return AppColors.green;
+    if (number >= 2) return AppColors.amber;
+    return AppColors.red;
+  }
+
+  Color _refundColor(String refund) {
+    final text = refund.toLowerCase();
+    if (text.contains('0')) return AppColors.red;
+    if (text.contains('50') || text.contains('half')) return AppColors.amber;
+    return AppColors.green;
+  }
+
+  String _statusLabel(String status) {
+    final cleaned = status.trim();
+    if (cleaned.isEmpty) return 'Processed';
+    return cleaned
+        .split(RegExp(r'[_\s-]+'))
+        .map((part) => part.isEmpty
+            ? part
+            : '${part.substring(0, 1).toUpperCase()}${part.substring(1).toLowerCase()}')
+        .join(' ');
+  }
 }
-
-
-
-
