@@ -192,7 +192,424 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
               style:
                   const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
         ]),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          SmallButton.ghost(
+            'Stream',
+            icon: Icons.live_tv_outlined,
+            onPressed:
+                match.id == null ? null : () => _showStreamDialog(match.id!),
+          ),
+          SmallButton.ghost(
+            'Score',
+            icon: Icons.scoreboard_outlined,
+            onPressed:
+                match.id == null ? null : () => _showScoreboardDialog(match),
+          ),
+          SmallButton.ghost(
+            'Commentary',
+            icon: Icons.chat_bubble_outline,
+            onPressed: match.id == null
+                ? null
+                : () => _showCommentaryDialog(match.id!, match.sport),
+          ),
+          SmallButton.red(
+            'Delete Note',
+            icon: Icons.delete_outline,
+            onPressed: match.id == null
+                ? null
+                : () => _showDeleteCommentaryDialog(match.id!),
+          ),
+        ]),
       ]),
+    );
+  }
+
+  Future<void> _showStreamDialog(int matchId) async {
+    final streamUrl =
+        TextEditingController(text: 'https://youtube.com/live/abc123xyz');
+    var streamType = 'youtube';
+
+    final request = await showDialog<UpdateStreamRequest>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Live Stream'),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<String>(
+                  value: streamType,
+                  decoration: const InputDecoration(labelText: 'Stream Type'),
+                  items: const [
+                    DropdownMenuItem(value: 'youtube', child: Text('YouTube')),
+                    DropdownMenuItem(value: 'custom', child: Text('Custom')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => streamType = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _dialogField('Stream URL', streamUrl,
+                    keyboardType: TextInputType.url),
+              ]),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => _showStreamInfo(context, matchId),
+                child: const Text('Info'),
+              ),
+              TextButton(
+                onPressed: () => _createMuxStream(context, matchId),
+                child: const Text('Mux'),
+              ),
+              TextButton(
+                onPressed: () => _endStream(context, matchId),
+                child: const Text('End'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(
+                  context,
+                  UpdateStreamRequest(
+                    streamUrl: streamUrl.text,
+                    streamType: streamType,
+                  ),
+                ),
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+
+    streamUrl.dispose();
+    if (request == null) return;
+    final saved = await _matchController.updateStream(matchId, request);
+    if (!mounted) return;
+    _showMatchActionResult(saved, 'Stream updated.');
+  }
+
+  Future<void> _showStreamInfo(BuildContext dialogContext, int matchId) async {
+    Navigator.pop(dialogContext);
+    final info = await _matchController.getStreamInfo(matchId);
+    if (!mounted) return;
+    if (info == null) {
+      _showMatchActionResult(false, '');
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Stream Info'),
+          content: SingleChildScrollView(
+            child: Text(
+              info.toString(),
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _createMuxStream(BuildContext dialogContext, int matchId) async {
+    Navigator.pop(dialogContext);
+    final saved = await _matchController.createMuxStream(matchId);
+    if (!mounted) return;
+    _showMatchActionResult(saved, 'Mux stream created.');
+  }
+
+  Future<void> _endStream(BuildContext dialogContext, int matchId) async {
+    Navigator.pop(dialogContext);
+    final saved = await _matchController.endStream(matchId);
+    if (!mounted) return;
+    _showMatchActionResult(saved, 'Stream ended.');
+  }
+
+  Future<void> _showScoreboardDialog(MatchItem match) async {
+    final isFootball = match.sport.toLowerCase().contains('football');
+    final isRacketSport =
+        RegExp('badminton|tennis', caseSensitive: false).hasMatch(match.sport);
+    final teamAName = TextEditingController(text: 'Bhandara XI');
+    final teamBName = TextEditingController(text: 'Nagpur Tigers');
+    final teamAScore = TextEditingController(text: isFootball ? '0' : '156/4');
+    final teamBScore = TextEditingController(text: isFootball ? '0' : '89/2');
+    final teamAOvers = TextEditingController(text: '12.3');
+    final teamBOvers = TextEditingController(text: '8.1');
+    final teamAWickets = TextEditingController(text: '4');
+    final teamBWickets = TextEditingController(text: '2');
+    final batting = TextEditingController(text: 'b');
+    final currentOver = TextEditingController(text: '8.1');
+    final target = TextEditingController(text: '157');
+    final currentRunRate = TextEditingController(text: '10.9');
+    final requiredRunRate = TextEditingController(text: '11.5');
+    final period = TextEditingController(text: isFootball ? '2nd Half' : 'Set 2');
+    final result = TextEditingController();
+    var matchStatus = 'live';
+
+    final request = await showDialog<UpdateScoreboardRequest>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Update Scoreboard'),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<String>(
+                  value: matchStatus,
+                  decoration: const InputDecoration(labelText: 'Match Status'),
+                  items: const [
+                    DropdownMenuItem(value: 'live', child: Text('Live')),
+                    DropdownMenuItem(
+                        value: 'innings_break', child: Text('Innings Break')),
+                    DropdownMenuItem(
+                        value: 'completed', child: Text('Completed')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => matchStatus = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _dialogField('Team A Name', teamAName),
+                _dialogField('Team B Name', teamBName),
+                if (isFootball) ...[
+                  _dialogField('Team A Goals', teamAScore,
+                      keyboardType: TextInputType.number),
+                  _dialogField('Team B Goals', teamBScore,
+                      keyboardType: TextInputType.number),
+                  _dialogField('Period', period),
+                ] else if (isRacketSport) ...[
+                  _dialogField('Team A Score', teamAScore),
+                  _dialogField('Team B Score', teamBScore),
+                  _dialogField('Period', period),
+                ] else ...[
+                  _dialogField('Team A Score', teamAScore),
+                  _dialogField('Team A Overs', teamAOvers),
+                  _dialogField('Team A Wickets', teamAWickets,
+                      keyboardType: TextInputType.number),
+                  _dialogField('Team B Score', teamBScore),
+                  _dialogField('Team B Overs', teamBOvers),
+                  _dialogField('Team B Wickets', teamBWickets,
+                      keyboardType: TextInputType.number),
+                  _dialogField('Batting Team (a/b)', batting),
+                  _dialogField('Current Over', currentOver),
+                  _dialogField('Target', target,
+                      keyboardType: TextInputType.number),
+                  _dialogField('Current Run Rate', currentRunRate,
+                      keyboardType: TextInputType.number),
+                  _dialogField('Required Run Rate', requiredRunRate,
+                      keyboardType: TextInputType.number),
+                ],
+                _dialogField('Result', result),
+              ]),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(
+                  context,
+                  UpdateScoreboardRequest(
+                    teamAName: teamAName.text,
+                    teamAScore: isFootball ? '' : teamAScore.text,
+                    teamAOvers: teamAOvers.text,
+                    teamAWickets:
+                        isFootball ? null : int.tryParse(teamAWickets.text),
+                    teamAGoals:
+                        isFootball ? int.tryParse(teamAScore.text) ?? 0 : null,
+                    teamBName: teamBName.text,
+                    teamBScore: isFootball ? '' : teamBScore.text,
+                    teamBOvers: teamBOvers.text,
+                    teamBWickets:
+                        isFootball ? null : int.tryParse(teamBWickets.text),
+                    teamBGoals:
+                        isFootball ? int.tryParse(teamBScore.text) ?? 0 : null,
+                    batting: isFootball || isRacketSport ? null : batting.text,
+                    currentOver:
+                        isFootball || isRacketSport ? null : currentOver.text,
+                    target: isFootball || isRacketSport
+                        ? null
+                        : int.tryParse(target.text),
+                    currentRunRate: isFootball || isRacketSport
+                        ? null
+                        : double.tryParse(currentRunRate.text),
+                    requiredRunRate: isFootball || isRacketSport
+                        ? null
+                        : double.tryParse(requiredRunRate.text),
+                    period: isFootball || isRacketSport ? period.text : null,
+                    matchStatus: matchStatus,
+                    result: result.text,
+                  ),
+                ),
+                child: const Text('Update'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+
+    for (final controller in [
+      teamAName,
+      teamBName,
+      teamAScore,
+      teamBScore,
+      teamAOvers,
+      teamBOvers,
+      teamAWickets,
+      teamBWickets,
+      batting,
+      currentOver,
+      target,
+      currentRunRate,
+      requiredRunRate,
+      period,
+      result,
+    ]) {
+      controller.dispose();
+    }
+
+    if (request == null || match.id == null) return;
+    final saved = await _matchController.updateScoreboard(match.id!, request);
+    if (!mounted) return;
+    _showMatchActionResult(saved, 'Scoreboard updated.');
+  }
+
+  Future<void> _showCommentaryDialog(int matchId, String sport) async {
+    final text = TextEditingController();
+    final over = TextEditingController(text: '12.3');
+    final minute = TextEditingController(text: '67');
+    final playerName = TextEditingController();
+    final isFootball = sport.toLowerCase().contains('football');
+    var eventType = isFootball ? 'goal' : 'normal';
+
+    final request = await showDialog<AddCommentaryRequest>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setDialogState) {
+          final events = isFootball
+              ? const ['goal', 'card', 'half_time', 'highlight', 'normal']
+              : const ['normal', 'four', 'six', 'wicket', 'highlight'];
+
+          return AlertDialog(
+            title: const Text('Add Commentary'),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<String>(
+                  value: eventType,
+                  decoration: const InputDecoration(labelText: 'Event Type'),
+                  items: events
+                      .map((event) => DropdownMenuItem(
+                            value: event,
+                            child: Text(_label(event)),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => eventType = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                _dialogField(isFootball ? 'Minute' : 'Over',
+                    isFootball ? minute : over),
+                _dialogField('Player Name', playerName),
+                _dialogField('Commentary Text', text),
+              ]),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(
+                  context,
+                  AddCommentaryRequest(
+                    text: text.text,
+                    over: isFootball ? null : over.text,
+                    minute: isFootball ? minute.text : null,
+                    eventType: eventType,
+                    playerName: playerName.text,
+                  ),
+                ),
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+
+    text.dispose();
+    over.dispose();
+    minute.dispose();
+    playerName.dispose();
+
+    if (request == null) return;
+    final saved = await _matchController.addCommentary(matchId, request);
+    if (!mounted) return;
+    _showMatchActionResult(saved, 'Commentary added.');
+  }
+
+  Future<void> _showDeleteCommentaryDialog(int matchId) async {
+    final commentaryId = TextEditingController();
+    final id = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete Commentary'),
+          content: _dialogField('Commentary ID', commentaryId,
+              keyboardType: TextInputType.number),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(context, int.tryParse(commentaryId.text)),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    commentaryId.dispose();
+    if (id == null) return;
+    final saved = await _matchController.deleteCommentary(matchId, id);
+    if (!mounted) return;
+    _showMatchActionResult(saved, 'Commentary deleted.');
+  }
+
+  void _showMatchActionResult(bool success, String successMessage) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success
+            ? successMessage
+            : _matchController.errorMessage ?? 'Unable to save changes.'),
+        backgroundColor: success ? AppColors.green : AppColors.red,
+      ),
     );
   }
 

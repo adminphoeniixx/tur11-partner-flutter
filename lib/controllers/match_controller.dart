@@ -61,4 +61,91 @@ class MatchController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<bool> updateStream(int matchId, UpdateStreamRequest request) {
+    return _saveAction(
+      () => _matchService.updateStream(matchId, request),
+      fallback: 'Unable to update stream. Please try again.',
+    );
+  }
+
+  Future<Object?> getStreamInfo(int matchId) async {
+    _isSaving = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      return await _matchService.getStream(matchId);
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return null;
+    } catch (_) {
+      _errorMessage = 'Unable to get stream info. Please try again.';
+      return null;
+    } finally {
+      _isSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> createMuxStream(int matchId) {
+    return _saveAction(
+      () => _matchService.createMuxStream(matchId),
+      fallback: 'Unable to create Mux stream. Please try again.',
+    );
+  }
+
+  Future<bool> endStream(int matchId) {
+    return _saveAction(
+      () => _matchService.endStream(matchId),
+      fallback: 'Unable to end stream. Please try again.',
+    );
+  }
+
+  Future<bool> updateScoreboard(
+    int matchId,
+    UpdateScoreboardRequest request,
+  ) {
+    return _saveAction(
+      () => _matchService.updateScoreboard(matchId, request),
+      fallback: 'Unable to update scoreboard. Please try again.',
+    );
+  }
+
+  Future<bool> addCommentary(int matchId, AddCommentaryRequest request) {
+    return _saveAction(
+      () => _matchService.addCommentary(matchId, request),
+      fallback: 'Unable to add commentary. Please try again.',
+    );
+  }
+
+  Future<bool> deleteCommentary(int matchId, int commentaryId) {
+    return _saveAction(
+      () => _matchService.deleteCommentary(matchId, commentaryId),
+      fallback: 'Unable to delete commentary. Please try again.',
+    );
+  }
+
+  Future<bool> _saveAction(
+    Future<void> Function() action, {
+    required String fallback,
+  }) async {
+    _isSaving = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await action();
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = fallback;
+      return false;
+    } finally {
+      _isSaving = false;
+      notifyListeners();
+    }
+  }
 }

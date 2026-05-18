@@ -16,6 +16,13 @@ class ApiConstants {
   static const payouts = '/payouts';
   static const reviews = '/reviews';
   static const matches = '/matches';
+  static String matchStream(int matchId) => '$matches/$matchId/stream';
+  static String matchMuxStream(int matchId) => '$matches/$matchId/stream/mux';
+  static String endMatchStream(int matchId) => '$matches/$matchId/stream/end';
+  static String matchScoreboard(int matchId) => '$matches/$matchId/scoreboard';
+  static String matchCommentary(int matchId) => '$matches/$matchId/commentary';
+  static String matchCommentaryEntry(int matchId, int commentaryId) =>
+      '$matches/$matchId/commentary/$commentaryId';
   static const profile = '/profile';
   static const fcmToken = '/fcm-token';
   static const bankDetails = '/bank-details';

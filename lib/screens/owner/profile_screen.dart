@@ -132,8 +132,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 2),
                     Text(
                       'Turf Owner${profile.city == null ? '' : ' - ${profile.city}'}',
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.muted),
+                      style:
+                          const TextStyle(fontSize: 12, color: AppColors.muted),
                     ),
                   ]),
             ),
@@ -155,10 +155,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _infoRow(Icons.business, _value(profile.businessName)),
         ]),
       ),
-      AppCard(
-        padding: const EdgeInsets.all(12),
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+      const AppCard(
+        padding: EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Notification Preferences',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
           SizedBox(height: 12),

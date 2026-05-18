@@ -80,6 +80,127 @@ class CreateMatchRequest {
   }
 }
 
+class UpdateStreamRequest {
+  final String streamUrl;
+  final String streamType;
+
+  const UpdateStreamRequest({
+    required this.streamUrl,
+    required this.streamType,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'stream_url': streamUrl.trim(),
+      'stream_type': streamType.trim(),
+    };
+  }
+}
+
+class UpdateScoreboardRequest {
+  final String teamAName;
+  final String teamAScore;
+  final String teamAOvers;
+  final int? teamAWickets;
+  final int? teamAGoals;
+  final String teamBName;
+  final String teamBScore;
+  final String teamBOvers;
+  final int? teamBWickets;
+  final int? teamBGoals;
+  final String? batting;
+  final String? currentOver;
+  final int? target;
+  final double? currentRunRate;
+  final double? requiredRunRate;
+  final String? period;
+  final String matchStatus;
+  final String? result;
+
+  const UpdateScoreboardRequest({
+    required this.teamAName,
+    this.teamAScore = '',
+    this.teamAOvers = '',
+    this.teamAWickets,
+    this.teamAGoals,
+    required this.teamBName,
+    this.teamBScore = '',
+    this.teamBOvers = '',
+    this.teamBWickets,
+    this.teamBGoals,
+    this.batting,
+    this.currentOver,
+    this.target,
+    this.currentRunRate,
+    this.requiredRunRate,
+    this.period,
+    required this.matchStatus,
+    this.result,
+  });
+
+  Map<String, dynamic> toJson() {
+    final teamA = <String, dynamic>{'name': teamAName.trim()};
+    final teamB = <String, dynamic>{'name': teamBName.trim()};
+
+    void addIfPresent(Map<String, dynamic> map, String key, Object? value) {
+      if (value == null) return;
+      if (value is String && value.trim().isEmpty) return;
+      map[key] = value is String ? value.trim() : value;
+    }
+
+    addIfPresent(teamA, 'score', teamAScore);
+    addIfPresent(teamA, 'overs', teamAOvers);
+    addIfPresent(teamA, 'wickets', teamAWickets);
+    addIfPresent(teamA, 'goals', teamAGoals);
+    addIfPresent(teamB, 'score', teamBScore);
+    addIfPresent(teamB, 'overs', teamBOvers);
+    addIfPresent(teamB, 'wickets', teamBWickets);
+    addIfPresent(teamB, 'goals', teamBGoals);
+
+    return {
+      'team_a': teamA,
+      'team_b': teamB,
+      if (batting != null && batting!.trim().isNotEmpty)
+        'batting': batting!.trim(),
+      if (currentOver != null && currentOver!.trim().isNotEmpty)
+        'current_over': currentOver!.trim(),
+      if (target != null) 'target': target,
+      if (currentRunRate != null) 'current_run_rate': currentRunRate,
+      if (requiredRunRate != null) 'required_run_rate': requiredRunRate,
+      if (period != null && period!.trim().isNotEmpty) 'period': period!.trim(),
+      'match_status': matchStatus.trim(),
+      if (result != null && result!.trim().isNotEmpty) 'result': result!.trim(),
+    };
+  }
+}
+
+class AddCommentaryRequest {
+  final String text;
+  final String? over;
+  final String? minute;
+  final String eventType;
+  final String? playerName;
+
+  const AddCommentaryRequest({
+    required this.text,
+    this.over,
+    this.minute,
+    required this.eventType,
+    this.playerName,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'text': text.trim(),
+      if (over != null && over!.trim().isNotEmpty) 'over': over!.trim(),
+      if (minute != null && minute!.trim().isNotEmpty) 'minute': minute!.trim(),
+      'event_type': eventType.trim(),
+      if (playerName != null && playerName!.trim().isNotEmpty)
+        'player_name': playerName!.trim(),
+    };
+  }
+}
+
 class MatchesResponse {
   final List<MatchItem> matches;
 
