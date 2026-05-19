@@ -34,7 +34,7 @@ class MatchItem {
         json['turf_name'] ?? json['turfName'] ?? turf['name'],
         fallback: 'Turf',
       ),
-      date: _stringValue(json['date']),
+      date: _formatDate(_stringValue(json['date'])),
       time: _timeRange(json),
       players: joined.isEmpty && max.isEmpty
           ? _stringValue(json['players'], fallback: '-')
@@ -209,9 +209,15 @@ class MatchesResponse {
   factory MatchesResponse.fromJson(Object? value) {
     final root = _asMap(value);
     final data = root['data'];
-    final list = data is List
-        ? data
-        : root['matches'] ?? root['items'] ?? _asMap(data)['matches'] ?? _asMap(data)['items'];
+    final dataMap = _asMap(data);
+    final list = _firstList([
+      data,
+      root['matches'],
+      root['items'],
+      dataMap['matches'],
+      dataMap['items'],
+      dataMap['data'],
+    ]);
 
     return MatchesResponse(
       matches:
@@ -231,6 +237,24 @@ List<dynamic> _asList(Object? value) {
   return const [];
 }
 
+List<dynamic> _firstList(List<Object?> values) {
+  for (final value in values) {
+    final direct = _asList(value);
+    if (direct.isNotEmpty) return direct;
+
+    final map = _asMap(value);
+    for (final key in const ['data', 'items', 'matches', 'results']) {
+      final nested = _asList(map[key]);
+      if (nested.isNotEmpty) return nested;
+
+      final nestedMap = _asMap(map[key]);
+      final paginated = _asList(nestedMap['data']);
+      if (paginated.isNotEmpty) return paginated;
+    }
+  }
+  return const [];
+}
+
 String _stringValue(Object? value, {String fallback = ''}) {
   final text = value?.toString().trim();
   if (text == null || text.isEmpty || text == 'null') return fallback;
@@ -245,14 +269,57 @@ int? _asInt(Object? value) {
 
 String _timeRange(Map<String, dynamic> json) {
   final direct = _stringValue(json['time']);
-  if (direct.isNotEmpty) return direct;
+  if (direct.isNotEmpty) return _formatTimeRange(direct);
   final start = _stringValue(json['time_start'] ?? json['timeStart']);
   final end = _stringValue(json['time_end'] ?? json['timeEnd']);
-  return [start, end].where((part) => part.isNotEmpty).join(' - ');
+  return [start, end]
+      .where((part) => part.isNotEmpty)
+      .map(_formatTime)
+      .join(' - ');
 }
 
 String _money(Object? value) {
   final text = _stringValue(value, fallback: '0');
   if (text.startsWith('Rs') || text.startsWith('₹')) return text;
   return 'Rs $text';
+}
+
+String _formatDate(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return '';
+  final normalized = text.length >= 10 ? text.substring(0, 10) : text;
+  final date = DateTime.tryParse(normalized);
+  if (date == null) return text;
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
+}
+
+String _formatTimeRange(String value) {
+  final parts = value.split(RegExp(r'\s*-\s*|\s+to\s+', caseSensitive: false));
+  if (parts.length >= 2) return '${_formatTime(parts[0])} - ${_formatTime(parts[1])}';
+  return _formatTime(value);
+}
+
+String _formatTime(String value) {
+  final text = value.trim();
+  final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(text);
+  if (match == null) return text;
+  final hour = int.tryParse(match.group(1)!) ?? 0;
+  final minute = match.group(2)!;
+  final period = hour >= 12 ? 'PM' : 'AM';
+  final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+  return '$displayHour:$minute $period';
 }

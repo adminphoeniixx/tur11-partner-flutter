@@ -41,29 +41,35 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              const SizedBox(
-                width: 230,
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Payments',
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.w800)),
-                      SizedBox(height: 3),
-                      Text('Revenue & payout tracking',
-                          style:
-                              TextStyle(fontSize: 12, color: AppColors.muted)),
-                    ]),
-              ),
-              PillButton.ghost('Export CSV', icon: Icons.upload),
-            ],
-          ),
+          LayoutBuilder(builder: (context, constraints) {
+            final compact = constraints.maxWidth < 360;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 10,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SizedBox(
+                  width:
+                      compact ? constraints.maxWidth : constraints.maxWidth - 135,
+                  child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Payments',
+                            style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w800)),
+                        SizedBox(height: 3),
+                        Text('Revenue & payout tracking',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.muted)),
+                      ]),
+                ),
+                PillButton.ghost('Export CSV', icon: Icons.upload),
+              ],
+            );
+          }),
           if (_controller.errorMessage != null) ...[
             const SizedBox(height: 10),
             Text(
@@ -190,23 +196,24 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         border: Border.all(color: AppColors.border),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          AppBadge(label: type, bg: typeBg, fg: typeFg),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text(id,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.muted))),
-          const SizedBox(width: 8),
-          Flexible(
-            flex: 0,
-            child: StatusBadge(label: statusLabel, type: status),
-          ),
-        ]),
+        Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              AppBadge(label: type, bg: typeBg, fg: typeFg),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 150),
+                child: Text(id,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.muted)),
+              ),
+              StatusBadge(label: statusLabel, type: status),
+            ]),
         const SizedBox(height: 12),
         Row(children: [
           Expanded(
@@ -229,7 +236,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         ]),
         const SizedBox(height: 4),
         Text('$date - Amount $amount - Fee $fee',
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 11, color: AppColors.muted)),
       ]),

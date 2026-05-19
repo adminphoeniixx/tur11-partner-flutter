@@ -126,13 +126,13 @@ class DashboardBooking {
         json['turf_name'] ?? json['turfName'] ?? turf['name'],
         fallback: 'Turf',
       ),
-      date: _stringValue(json['date'] ?? json['booking_date']),
-      time: _stringValue(
+      date: _formatDate(_stringValue(json['date'] ?? json['booking_date'])),
+      time: _formatTime(_stringValue(
         json['time'] ??
             json['slot_time'] ??
             json['slotTime'] ??
             json['start_time'],
-      ),
+      )),
       amount: _money(json['amount'] ?? json['total'] ?? json['price']),
       status: _stringValue(json['status'], fallback: 'Confirmed'),
     );
@@ -258,4 +258,39 @@ String _slots(Map<String, dynamic> stats, Map<String, dynamic> json) {
 double _asDouble(Object? value) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+String _formatDate(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return '';
+  final normalized = text.length >= 10 ? text.substring(0, 10) : text;
+  final date = DateTime.tryParse(normalized);
+  if (date == null) return text;
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
+}
+
+String _formatTime(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return '';
+  final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(text);
+  if (match == null) return text;
+  final hour = int.tryParse(match.group(1)!) ?? 0;
+  final minute = match.group(2)!;
+  final period = hour >= 12 ? 'PM' : 'AM';
+  final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+  return '$displayHour:$minute $period';
 }

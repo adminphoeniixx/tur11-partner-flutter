@@ -229,7 +229,7 @@ class _TurfReviewsScreenState extends State<TurfReviewsScreen> {
     final reply = await showDialog<String>(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return ResponsiveAlertDialog(
           title: const Text('Reply to Review'),
           content: TextField(
             controller: textController,

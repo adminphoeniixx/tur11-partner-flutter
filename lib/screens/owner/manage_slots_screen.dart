@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/match_controller.dart';
+import '../../controllers/slot_controller.dart';
+import '../../controllers/turf_controller.dart';
 import '../../models/match_models.dart';
+import '../../models/slot_models.dart';
+import '../../models/turf_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 
@@ -14,29 +18,73 @@ class ManageSlotsScreen extends StatefulWidget {
 
 class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
   final MatchController _matchController = MatchController();
+  final SlotController _slotController = SlotController();
+  final TurfController _turfController = TurfController();
+  final Set<int> _selectedSlotIds = {};
+  DateTime _selectedDate = DateTime.now();
+  int? _selectedTurfId;
 
   @override
   void initState() {
     super.initState();
     _matchController.addListener(_onMatchesChanged);
-    _matchController.load();
+    _slotController.addListener(_onSlotsChanged);
+    _turfController.addListener(_onTurfsChanged);
+    _loadInitialData();
   }
 
   @override
   void dispose() {
     _matchController.removeListener(_onMatchesChanged);
+    _slotController.removeListener(_onSlotsChanged);
+    _turfController.removeListener(_onTurfsChanged);
     _matchController.dispose();
+    _slotController.dispose();
+    _turfController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadInitialData() async {
+    _matchController.load();
+    final loadedTurfs = await _turfController.load();
+    if (!mounted) return;
+    final availableTurfs = loadedTurfs
+        ? _turfController.turfs.where((turf) => turf.id != null)
+        : const Iterable<TurfItem>.empty();
+    final firstTurf = availableTurfs.isEmpty ? null : availableTurfs.first;
+    _selectedTurfId = firstTurf?.id ?? 1;
+    await _loadSlots();
   }
 
   void _onMatchesChanged() {
     if (mounted) setState(() {});
   }
 
+  void _onSlotsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onTurfsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<bool> _loadSlots() async {
+    final turfId = _selectedTurfId;
+    if (turfId == null) return false;
+    _selectedSlotIds.clear();
+    return _slotController.load(turfId: turfId, date: _apiDate(_selectedDate));
+  }
+
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      onRefresh: _matchController.load,
+      onRefresh: () async {
+        await Future.wait([
+          _matchController.load(),
+          _turfController.load(),
+          _loadSlots(),
+        ]);
+      },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
@@ -44,55 +92,15 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
           const Text('Manage Slots',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
           const SizedBox(height: 3),
-          const Text('Monday, April 7 - DLF Arena Cricket',
-              style: TextStyle(fontSize: 12, color: AppColors.muted)),
-          if (_matchController.errorMessage != null) ...[
+          Text('${_formatDisplayDate(_selectedDate)} - ${_selectedTurfName()}',
+              style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+          if (_slotController.errorMessage != null) ...[
             const SizedBox(height: 10),
-            Text(_matchController.errorMessage!,
+            Text(_slotController.errorMessage!,
                 style: const TextStyle(color: AppColors.red, fontSize: 12)),
           ],
           const SizedBox(height: 18),
-          AppCard(
-            padding: const EdgeInsets.all(12),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                SmallButton.ghost(
-                  _matchController.isSaving ? 'Saving...' : 'Create Match',
-                  icon: Icons.add,
-                  onPressed:
-                      _matchController.isSaving ? null : _showCreateMatchDialog,
-                ),
-                SmallButton.red('Block All', icon: Icons.close),
-              ]),
-              const SectionLabel('Morning (6 AM - 12 PM)'),
-              _slotGrid([
-                _Slot('6:00 AM', 'Rahul K. - Rs 800', SlotState.booked),
-                _Slot('7:00 AM', 'Arjun K. - Rs 800', SlotState.booked),
-                _Slot('8:00 AM', 'Available', SlotState.available),
-                _Slot('9:00 AM', 'Available', SlotState.available),
-                _Slot('10:00 AM', 'Available', SlotState.available),
-                _Slot('11:00 AM', 'Blocked', SlotState.blocked),
-              ]),
-              const SectionLabel('Afternoon (12 PM - 5 PM)'),
-              _slotGrid([
-                _Slot('12:00 PM', 'Available', SlotState.available),
-                _Slot('1:00 PM', 'Available', SlotState.available),
-                _Slot('2:00 PM', 'Available', SlotState.available),
-                _Slot('3:00 PM', 'Available', SlotState.available),
-                _Slot('4:00 PM', 'Available', SlotState.available),
-              ]),
-              const SectionLabel('Evening / Peak (5 PM - 11 PM)'),
-              _slotGrid([
-                _Slot('5:00 PM', 'Priya V. - Rs 1,200', SlotState.booked),
-                _Slot('6:00 PM', 'Sahil R. - Rs 1,200', SlotState.booked),
-                _Slot('7:00 PM', 'Rahul K. - Rs 1,600', SlotState.booked),
-                _Slot('8:00 PM', 'Match - Rs 1,200', SlotState.booked),
-                _Slot('9:00 PM', 'Available', SlotState.available),
-                _Slot('10:00 PM', 'Available', SlotState.available),
-              ]),
-            ]),
-          ),
+          _slotsCard(),
           _matchesCard(),
           AppCard(
             padding: const EdgeInsets.all(12),
@@ -123,14 +131,351 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     );
   }
 
+  Widget _slotsCard() {
+    return AppCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Slot Inventory',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(
+                  _selectedSlotIds.isEmpty
+                      ? 'Tap available or blocked slots to select them.'
+                      : '${_selectedSlotIds.length} selected',
+                  style:
+                      const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ],
+            ),
+          ),
+          if (_slotController.isLoading || _slotController.isSaving)
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+        ]),
+        const SizedBox(height: 12),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          _turfPicker(),
+          SmallButton.ghost(
+            _formatShortDate(_selectedDate),
+            icon: Icons.calendar_month_outlined,
+            onPressed: _pickSlotDate,
+          ),
+          SmallButton.ghost(
+            'Generate',
+            icon: Icons.auto_awesome_outlined,
+            onPressed:
+                _slotController.isSaving ? null : _showGenerateSlotsDialog,
+          ),
+          SmallButton.red(
+            'Block',
+            icon: Icons.block,
+            onPressed: _canMutateSelected ? _showBlockSlotsDialog : null,
+          ),
+          SmallButton.ghost(
+            'Unblock',
+            icon: Icons.lock_open_outlined,
+            onPressed: _canMutateSelected ? _unblockSelectedSlots : null,
+          ),
+          SmallButton.ghost(
+            'Price',
+            icon: Icons.currency_rupee,
+            onPressed: _canMutateSelected ? _showUpdatePriceDialog : null,
+          ),
+        ]),
+        const SizedBox(height: 8),
+        if (_slotController.isLoading && _slotController.slots.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(18),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_slotController.slots.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Text('No slots found. Generate slots for this turf/date.',
+                style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          )
+        else ...[
+          if (_slotsForPeriod(0, 12).isNotEmpty) ...[
+            const SectionLabel('Morning (6 AM - 12 PM)'),
+            _slotGrid(_slotsForPeriod(0, 12)),
+          ],
+          if (_slotsForPeriod(12, 17).isNotEmpty) ...[
+            const SectionLabel('Afternoon (12 PM - 5 PM)'),
+            _slotGrid(_slotsForPeriod(12, 17)),
+          ],
+          if (_slotsForPeriod(17, 24).isNotEmpty) ...[
+            const SectionLabel('Evening / Peak (5 PM - 11 PM)'),
+            _slotGrid(_slotsForPeriod(17, 24)),
+          ],
+        ],
+      ]),
+    );
+  }
+
+  Widget _turfPicker() {
+    final turfs = _turfController.turfs.where((turf) => turf.id != null);
+    if (turfs.isEmpty) {
+      return SmallButton.ghost(
+        _selectedTurfId == null ? 'Turf' : 'Turf #$_selectedTurfId',
+        icon: Icons.stadium_outlined,
+        onPressed: _showTurfIdDialog,
+      );
+    }
+
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: turfs.any((turf) => turf.id == _selectedTurfId)
+              ? _selectedTurfId
+              : null,
+          iconSize: 16,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: AppColors.dark,
+          ),
+          items: turfs
+              .map((turf) => DropdownMenuItem(
+                    value: turf.id,
+                    child: Text(turf.name, overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
+          onChanged: (value) async {
+            if (value == null) return;
+            setState(() => _selectedTurfId = value);
+            await _loadSlots();
+          },
+        ),
+      ),
+    );
+  }
+
+  bool get _canMutateSelected =>
+      _selectedSlotIds.isNotEmpty && !_slotController.isSaving;
+
+  List<SlotItem> _slotsForPeriod(int startHour, int endHour) {
+    return _slotController.slots.where((slot) {
+      final hour = int.tryParse(slot.startTime.split(':').first) ?? -1;
+      return hour >= startHour && hour < endHour;
+    }).toList();
+  }
+
+  Future<void> _pickSlotDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2032),
+    );
+    if (picked == null) return;
+    setState(() => _selectedDate = picked);
+    await _loadSlots();
+  }
+
+  Future<void> _showTurfIdDialog() async {
+    final turfId = TextEditingController(text: (_selectedTurfId ?? 1).toString());
+    final id = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return ResponsiveAlertDialog(
+          title: const Text('Turf ID'),
+          content: _dialogField('Turf ID', turfId,
+              keyboardType: TextInputType.number),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, int.tryParse(turfId.text)),
+              child: const Text('Load'),
+            ),
+          ],
+        );
+      },
+    );
+    turfId.dispose();
+    if (id == null) return;
+    setState(() => _selectedTurfId = id);
+    await _loadSlots();
+  }
+
+  Future<void> _showGenerateSlotsDialog() async {
+    final turfId = _selectedTurfId;
+    if (turfId == null) return;
+    final from = TextEditingController(text: _displayDate(_selectedDate));
+    final to = TextEditingController(
+        text: _displayDate(_selectedDate.add(const Duration(days: 6))));
+    final duration = TextEditingController(text: '60');
+
+    final request = await showDialog<GenerateSlotsRequest>(
+      context: context,
+      builder: (context) {
+        return ResponsiveAlertDialog(
+          title: const Text('Generate Slots'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              _dialogDateField('Date From', from),
+              _dialogDateField('Date To', to),
+              _dialogField('Slot Duration (minutes)', duration,
+                  keyboardType: TextInputType.number),
+            ]),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(
+                context,
+                GenerateSlotsRequest(
+                  turfId: turfId,
+                  dateFrom: _apiDateFromText(from.text),
+                  dateTo: _apiDateFromText(to.text),
+                  slotDuration: int.tryParse(duration.text) ?? 60,
+                ),
+              ),
+              child: const Text('Generate'),
+            ),
+          ],
+        );
+      },
+    );
+
+    from.dispose();
+    to.dispose();
+    duration.dispose();
+
+    if (request == null) return;
+    final saved = await _slotController.generate(request);
+    if (!mounted) return;
+    if (saved) {
+      setState(() => _selectedDate = _parseApiDate(request.dateFrom));
+      _selectedSlotIds.clear();
+    }
+    _showSlotActionResult(saved, 'Slots generated.');
+  }
+
+  Future<void> _showBlockSlotsDialog() async {
+    final reason = TextEditingController(text: 'Maintenance');
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return ResponsiveAlertDialog(
+          title: const Text('Block Slots'),
+          content: _dialogField('Reason', reason),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, reason.text),
+              child: const Text('Block'),
+            ),
+          ],
+        );
+      },
+    );
+    reason.dispose();
+    if (value == null) return;
+    final saved = await _slotController.block(
+      slotIds: _selectedSlotIds.toList(),
+      reason: value.trim().isEmpty ? 'Blocked by owner' : value.trim(),
+    );
+    if (!mounted) return;
+    if (saved) _selectedSlotIds.clear();
+    _showSlotActionResult(saved, 'Slots blocked.');
+  }
+
+  Future<void> _unblockSelectedSlots() async {
+    final saved = await _slotController.unblock(_selectedSlotIds.toList());
+    if (!mounted) return;
+    if (saved) _selectedSlotIds.clear();
+    _showSlotActionResult(saved, 'Slots unblocked.');
+  }
+
+  Future<void> _showUpdatePriceDialog() async {
+    final price = TextEditingController(text: '1200');
+    final value = await showDialog<num>(
+      context: context,
+      builder: (context) {
+        return ResponsiveAlertDialog(
+          title: const Text('Update Slot Price'),
+          content: _dialogField('Price', price,
+              keyboardType: TextInputType.number),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, num.tryParse(price.text)),
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+    price.dispose();
+    if (value == null) return;
+    final saved = await _slotController.updatePrice(
+      slotIds: _selectedSlotIds.toList(),
+      price: value,
+    );
+    if (!mounted) return;
+    if (saved) _selectedSlotIds.clear();
+    _showSlotActionResult(saved, 'Slot price updated.');
+  }
+
+  void _showSlotActionResult(bool success, String successMessage) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success
+            ? successMessage
+            : _slotController.errorMessage ?? 'Unable to save slot changes.'),
+        backgroundColor: success ? AppColors.green : AppColors.red,
+      ),
+    );
+  }
+
   Widget _matchesCard() {
     return SizedBox(
       width: double.infinity,
       child: AppCard(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Owner Matches',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Expanded(
+              child: Text('Owner Matches',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+            SmallButton.ghost(
+              _matchController.isSaving ? 'Saving...' : 'Create',
+              icon: Icons.add,
+              onPressed:
+                  _matchController.isSaving ? null : _showCreateMatchDialog,
+            ),
+          ]),
           const SizedBox(height: 14),
           if (_matchController.isLoading && _matchController.matches.isEmpty)
             const Center(
@@ -142,7 +487,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
           else if (_matchController.matches.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('No open matches found.',
+              child: Text('No matches found.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted)),
             )
           else
@@ -234,7 +579,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       context: context,
       builder: (context) {
         return StatefulBuilder(builder: (context, setDialogState) {
-          return AlertDialog(
+          return ResponsiveAlertDialog(
             title: const Text('Live Stream'),
             content: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -308,7 +653,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     await showDialog<void>(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return ResponsiveAlertDialog(
           title: const Text('Stream Info'),
           content: SingleChildScrollView(
             child: Text(
@@ -366,7 +711,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       context: context,
       builder: (context) {
         return StatefulBuilder(builder: (context, setDialogState) {
-          return AlertDialog(
+          return ResponsiveAlertDialog(
             title: const Text('Update Scoreboard'),
             content: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -510,7 +855,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
               ? const ['goal', 'card', 'half_time', 'highlight', 'normal']
               : const ['normal', 'four', 'six', 'wicket', 'highlight'];
 
-          return AlertDialog(
+          return ResponsiveAlertDialog(
             title: const Text('Add Commentary'),
             content: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -576,7 +921,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     final id = await showDialog<int>(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return ResponsiveAlertDialog(
           title: const Text('Delete Commentary'),
           content: _dialogField('Commentary ID', commentaryId,
               keyboardType: TextInputType.number),
@@ -617,25 +962,25 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     final title = TextEditingController(text: 'Owner Match');
     final sport = TextEditingController(text: 'cricket');
     final turfId = TextEditingController(text: '1');
-    final date = TextEditingController(text: '2026-05-20');
-    final start = TextEditingController(text: '18:00');
-    final end = TextEditingController(text: '20:00');
+    final date = TextEditingController(text: _displayDate(_selectedDate));
+    final start = TextEditingController(text: '6:00 PM');
+    final end = TextEditingController(text: '8:00 PM');
     final maxPlayers = TextEditingController(text: '22');
     final fee = TextEditingController(text: '200');
 
     final request = await showDialog<CreateMatchRequest>(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return ResponsiveAlertDialog(
           title: const Text('Create Match'),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               _dialogField('Title', title),
               _dialogField('Sport', sport),
               _dialogField('Turf ID', turfId, keyboardType: TextInputType.number),
-              _dialogField('Date', date),
-              _dialogField('Start Time', start),
-              _dialogField('End Time', end),
+              _dialogDateField('Date', date),
+              _dialogTimeField('Start Time', start),
+              _dialogTimeField('End Time', end),
               _dialogField('Max Players', maxPlayers,
                   keyboardType: TextInputType.number),
               _dialogField('Fee Per Player', fee,
@@ -655,9 +1000,9 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
                     title: title.text,
                     sport: sport.text,
                     turfId: int.tryParse(turfId.text) ?? 1,
-                    date: date.text,
-                    timeStart: start.text,
-                    timeEnd: end.text,
+                    date: _apiDateFromText(date.text),
+                    timeStart: _apiTimeFromText(start.text),
+                    timeEnd: _apiTimeFromText(end.text),
                     maxPlayers: int.tryParse(maxPlayers.text) ?? 22,
                     feePerPlayer: num.tryParse(fee.text) ?? 200,
                   ),
@@ -707,7 +1052,65 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     );
   }
 
-  Widget _slotGrid(List<_Slot> slots) {
+  Widget _dialogDateField(String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        readOnly: true,
+        keyboardType: TextInputType.datetime,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: 'DD MMM YYYY',
+          suffixIcon: const Icon(Icons.calendar_month_outlined),
+        ),
+        onTap: () => _pickDialogDate(controller),
+      ),
+    );
+  }
+
+  Widget _dialogTimeField(String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        readOnly: true,
+        keyboardType: TextInputType.datetime,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: 'h:mm AM',
+          suffixIcon: const Icon(Icons.schedule),
+        ),
+        onTap: () => _pickDialogTime(controller),
+      ),
+    );
+  }
+
+  Future<void> _pickDialogDate(TextEditingController controller) async {
+    final initial = _dateFromText(controller.text) ?? _selectedDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2032),
+    );
+    if (picked == null) return;
+    controller.text = _displayDate(picked);
+  }
+
+  Future<void> _pickDialogTime(TextEditingController controller) async {
+    final normalized = _apiTimeFromText(controller.text);
+    final parts = normalized.split(':');
+    final initial = TimeOfDay(
+      hour: int.tryParse(parts.first) ?? 6,
+      minute: parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0,
+    );
+    final picked = await showTimePicker(context: context, initialTime: initial);
+    if (picked == null) return;
+    controller.text = _displayTime(picked);
+  }
+
+  Widget _slotGrid(List<SlotItem> slots) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -720,46 +1123,66 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       itemCount: slots.length,
       itemBuilder: (_, i) {
         final s = slots[i];
+        final slotId = s.id;
+        final isSelected =
+            slotId != null && _selectedSlotIds.contains(slotId);
         Color bg;
         Color border;
         Color text;
-        switch (s.state) {
-          case SlotState.booked:
-            bg = AppColors.dark;
-            border = AppColors.dark;
-            text = Colors.white;
-          case SlotState.available:
-            bg = AppColors.greenLt;
-            border = AppColors.green;
-            text = AppColors.green;
-          case SlotState.blocked:
-            bg = AppColors.redLt;
-            border = AppColors.red;
-            text = AppColors.red;
+        if (s.isBooked) {
+          bg = AppColors.dark;
+          border = AppColors.dark;
+          text = Colors.white;
+        } else if (s.isBlocked) {
+          bg = AppColors.redLt;
+          border = AppColors.red;
+          text = AppColors.red;
+        } else {
+          bg = AppColors.greenLt;
+          border = AppColors.green;
+          text = AppColors.green;
         }
 
-        return Container(
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: border, width: 1.5),
+        return InkWell(
+          onTap: s.isBooked || slotId == null
+              ? null
+              : () {
+                  setState(() {
+                    if (isSelected) {
+                      _selectedSlotIds.remove(slotId);
+                    } else {
+                      _selectedSlotIds.add(slotId);
+                    }
+                  });
+                },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? AppColors.blue : border,
+                width: isSelected ? 2.5 : 1.5,
+              ),
+            ),
+            padding: const EdgeInsets.all(8),
+            child:
+                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(s.timeLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w800, color: text)),
+              const SizedBox(height: 3),
+              Text(s.infoLabel,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 9,
+                      color: s.isBooked ? Colors.white70 : AppColors.muted)),
+            ]),
           ),
-          padding: const EdgeInsets.all(8),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(s.time,
-                style: TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w800, color: text)),
-            const SizedBox(height: 3),
-            Text(s.info,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 9,
-                    color: s.state == SlotState.booked
-                        ? Colors.white70
-                        : AppColors.muted)),
-          ]),
         );
       },
     );
@@ -808,12 +1231,130 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
             : '${part.substring(0, 1).toUpperCase()}${part.substring(1).toLowerCase()}')
         .join(' ');
   }
-}
 
-class _Slot {
-  final String time, info;
-  final SlotState state;
-  _Slot(this.time, this.info, this.state);
-}
+  String _selectedTurfName() {
+    for (final turf in _turfController.turfs) {
+      if (turf.id == _selectedTurfId) return turf.name;
+    }
+    return _selectedTurfId == null ? 'Select Turf' : 'Turf #$_selectedTurfId';
+  }
 
-enum SlotState { booked, available, blocked }
+  DateTime _parseApiDate(String value) {
+    return DateTime.tryParse(value) ?? _selectedDate;
+  }
+
+  String _apiDate(DateTime value) {
+    return '${value.year.toString().padLeft(4, '0')}-'
+        '${value.month.toString().padLeft(2, '0')}-'
+        '${value.day.toString().padLeft(2, '0')}';
+  }
+
+  String _formatShortDate(DateTime value) {
+    return _displayDate(value);
+  }
+
+  String _formatDisplayDate(DateTime value) {
+    const weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return '${weekdays[value.weekday - 1]}, '
+        '${months[value.month - 1]} ${value.day}, ${value.year}';
+  }
+
+  String _apiDateFromText(String value) {
+    final date = _dateFromText(value);
+    return date == null ? value.trim() : _apiDate(date);
+  }
+
+  DateTime? _dateFromText(String value) {
+    final text = value.trim();
+    final direct = DateTime.tryParse(text);
+    if (direct != null) return direct;
+    final match = RegExp(r'^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$')
+        .firstMatch(text);
+    if (match == null) return null;
+    const months = {
+      'jan': 1,
+      'feb': 2,
+      'mar': 3,
+      'apr': 4,
+      'may': 5,
+      'jun': 6,
+      'jul': 7,
+      'aug': 8,
+      'sep': 9,
+      'oct': 10,
+      'nov': 11,
+      'dec': 12,
+    };
+    final day = int.tryParse(match.group(1)!);
+    final month = months[match.group(2)!.toLowerCase()];
+    final year = int.tryParse(match.group(3)!);
+    if (day == null || month == null || year == null) return null;
+    return DateTime(year, month, day);
+  }
+
+  String _displayDate(DateTime value) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${value.day.toString().padLeft(2, '0')} ${months[value.month - 1]} ${value.year}';
+  }
+
+  String _apiTimeFromText(String value) {
+    final text = value.trim();
+    final twentyFour = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(text);
+    if (twentyFour != null) {
+      final hour = int.tryParse(twentyFour.group(1)!) ?? 0;
+      final minute = twentyFour.group(2)!;
+      return '${hour.toString().padLeft(2, '0')}:$minute';
+    }
+    final twelve =
+        RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)$', caseSensitive: false)
+            .firstMatch(text);
+    if (twelve == null) return text;
+    var hour = int.tryParse(twelve.group(1)!) ?? 0;
+    final minute = twelve.group(2)!;
+    final period = twelve.group(3)!.toUpperCase();
+    if (period == 'PM' && hour < 12) hour += 12;
+    if (period == 'AM' && hour == 12) hour = 0;
+    return '${hour.toString().padLeft(2, '0')}:$minute';
+  }
+
+  String _displayTime(TimeOfDay value) {
+    final period = value.hour >= 12 ? 'PM' : 'AM';
+    final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+    return '$hour:${value.minute.toString().padLeft(2, '0')} $period';
+  }
+}

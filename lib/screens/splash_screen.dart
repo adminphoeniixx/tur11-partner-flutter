@@ -50,10 +50,10 @@ class _SplashScreenState extends State<SplashScreen>
             opacity: _fade,
             child: ScaleTransition(
               scale: _scale,
-              child: Column(
+              child: const Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Turf11PartnerLogo(
+                  Turf11PartnerLogo(
                     light: true,
                     markSize: 88,
                     textSize: 30,

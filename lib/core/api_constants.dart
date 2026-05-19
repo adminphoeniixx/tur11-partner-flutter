@@ -15,6 +15,30 @@ class ApiConstants {
   static const payoutSummary = '/payout-summary';
   static const payouts = '/payouts';
   static const reviews = '/reviews';
+  static const turfs = '/turfs';
+  static String turf(int turfId) => '$turfs/$turfId';
+  static String turfUploadMedia(int turfId) => '$turfs/$turfId/upload-media';
+  static String turfRemoveMedia(int turfId) => '$turfs/$turfId/remove-media';
+  static String turfToggleStatus(int turfId) => '$turfs/$turfId/toggle-status';
+  static const slots = '/slots';
+  static const generateSlots = '/slots/generate';
+  static const blockSlots = '/slots/block';
+  static const unblockSlots = '/slots/unblock';
+  static const updateSlotPrice = '/slots/update-price';
+  static const tournaments = '/tournaments';
+  static String tournament(int tournamentId) => '$tournaments/$tournamentId';
+  static String tournamentOpenRegistration(int tournamentId) =>
+      '${tournament(tournamentId)}/open-registration';
+  static String tournamentTeams(int tournamentId) =>
+      '${tournament(tournamentId)}/teams';
+  static String tournamentGenerateFixtures(int tournamentId) =>
+      '${tournament(tournamentId)}/generate-fixtures';
+  static String tournamentRecordResult(int tournamentId) =>
+      '${tournament(tournamentId)}/record-result';
+  static String tournamentComplete(int tournamentId) =>
+      '${tournament(tournamentId)}/complete';
+  static String tournamentReviews(int tournamentId) =>
+      '${tournament(tournamentId)}/reviews';
   static const matches = '/matches';
   static String matchStream(int matchId) => '$matches/$matchId/stream';
   static String matchMuxStream(int matchId) => '$matches/$matchId/stream/mux';

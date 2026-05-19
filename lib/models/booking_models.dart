@@ -160,9 +160,9 @@ class CancellationItem {
         json['turf_name'] ?? turf['name'] ?? booking['turf_name'],
         fallback: 'Turf',
       ),
-      time: _stringValue(
+      time: _formatDateTime(_stringValue(
         json['cancelled_at'] ?? json['time'] ?? booking['date_time'],
-      ),
+      )),
       cancelledBefore: _stringValue(
         json['cancelled_before'] ??
             json['cancelledBefore'] ??
@@ -234,10 +234,10 @@ String _dateTime(Map<String, dynamic> json) {
   final direct = _stringValue(
     json['date_time'] ?? json['dateTime'] ?? json['slot'],
   );
-  if (direct.isNotEmpty) return direct;
+  if (direct.isNotEmpty) return _formatDateTime(direct);
   return [
-    _stringValue(json['date'] ?? json['booking_date']),
-    _stringValue(json['time'] ?? json['slot_time'] ?? json['start_time']),
+    _formatDate(_stringValue(json['date'] ?? json['booking_date'])),
+    _formatTime(_stringValue(json['time'] ?? json['slot_time'] ?? json['start_time'])),
   ].where((part) => part.isNotEmpty).join(', ');
 }
 
@@ -245,4 +245,49 @@ int _count(List<BookingItem> bookings, String needle) {
   return bookings
       .where((booking) => booking.status.toLowerCase().contains(needle))
       .length;
+}
+
+String _formatDateTime(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return '';
+  final date = DateTime.tryParse(text);
+  if (date == null) return text;
+  final dateText = _formatDate(text);
+  if (!text.contains(':')) return dateText;
+  return '$dateText, ${_formatTime('${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}')}';
+}
+
+String _formatDate(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return '';
+  final normalized = text.length >= 10 ? text.substring(0, 10) : text;
+  final date = DateTime.tryParse(normalized);
+  if (date == null) return text;
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
+}
+
+String _formatTime(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return '';
+  final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(text);
+  if (match == null) return text;
+  final hour = int.tryParse(match.group(1)!) ?? 0;
+  final minute = match.group(2)!;
+  final period = hour >= 12 ? 'PM' : 'AM';
+  final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+  return '$displayHour:$minute $period';
 }

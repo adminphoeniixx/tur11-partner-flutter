@@ -208,7 +208,7 @@ String _meta(
   Map<String, dynamic> turf,
   Map<String, dynamic> tournament,
 ) {
-  final date = _stringValue(json['date'] ?? json['created_at']);
+  final date = _formatDate(_stringValue(json['date'] ?? json['created_at']));
   final venue = _stringValue(
     json['turf_name'] ??
         turf['name'] ??
@@ -226,4 +226,27 @@ String _label(String value) {
       .map((part) =>
           '${part.substring(0, 1).toUpperCase()}${part.substring(1).toLowerCase()}')
       .join(' ');
+}
+
+String _formatDate(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return '';
+  final normalized = text.length >= 10 ? text.substring(0, 10) : text;
+  final date = DateTime.tryParse(normalized);
+  if (date == null) return text;
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
 }

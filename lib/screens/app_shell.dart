@@ -109,7 +109,7 @@ class _AppShellState extends State<AppShell> {
       case 'my_turfs':
         return MyTurfsScreen(onNavigate: _navigate);
       case 'add_turf':
-        return const AddTurfScreen();
+        return AddTurfScreen(onNavigate: _navigate);
       case 'manage_slots':
         return const ManageSlotsScreen();
       case 'bookings':
@@ -119,7 +119,7 @@ class _AppShellState extends State<AppShell> {
       case 'tournaments':
         return TournamentsScreen(onNavigate: _navigate);
       case 'add_tournament':
-        return const AddTournamentScreen();
+        return AddTournamentScreen(onNavigate: _navigate);
       case 'tourney_registrations':
         return const TourneyRegistrationsScreen();
       case 'tourney_reviews':
@@ -403,7 +403,7 @@ class _MoreScreen extends StatelessWidget {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return ResponsiveAlertDialog(
           title: const Text('Logout?'),
           content: const Text('Are you sure you want to logout?'),
           actions: [

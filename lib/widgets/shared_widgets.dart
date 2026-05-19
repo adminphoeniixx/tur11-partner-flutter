@@ -691,6 +691,47 @@ class AppCard extends StatelessWidget {
   }
 }
 
+class ResponsiveAlertDialog extends StatelessWidget {
+  final Widget? title;
+  final Widget? content;
+  final List<Widget>? actions;
+
+  const ResponsiveAlertDialog({
+    super.key,
+    this.title,
+    this.content,
+    this.actions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final maxWidth = size.width < 480 ? size.width - 32 : 420.0;
+    final maxHeight = size.height * 0.72;
+
+    return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+      contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      actionsOverflowDirection: VerticalDirection.down,
+      actionsOverflowAlignment: OverflowBarAlignment.end,
+      actionsOverflowButtonSpacing: 4,
+      title: title,
+      content: content == null
+          ? null
+          : ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: maxWidth,
+                maxHeight: maxHeight,
+              ),
+              child: SingleChildScrollView(child: content!),
+            ),
+      actions: actions,
+    );
+  }
+}
+
 // ── PREFIX INPUT ──
 class PrefixInput extends StatelessWidget {
   final String prefix;

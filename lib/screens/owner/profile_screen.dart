@@ -248,7 +248,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final request = await showDialog<UpdateProfileRequest>(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return ResponsiveAlertDialog(
           title: const Text('Edit Profile'),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -304,7 +304,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final request = await showDialog<UpdateBankDetailsRequest>(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return ResponsiveAlertDialog(
           title: const Text('Bank Details'),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [

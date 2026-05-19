@@ -59,6 +59,34 @@ class ApiClient {
     }
   }
 
+  static Future<Response<dynamic>> postForm(String url, FormData data) async {
+    final headers = await _authHeaders();
+
+    _logRequest(
+      method: 'POST',
+      url: url,
+      headers: headers,
+      data: data.fields,
+    );
+
+    try {
+      final response = await dio.post(
+        url,
+        data: data,
+        options: Options(
+          headers: headers,
+          contentType: Headers.multipartFormDataContentType,
+        ),
+      );
+      _logResponse(method: 'POST', url: url, response: response);
+      return response;
+    } on DioException catch (e) {
+      await _handleUnauthorized(e);
+      _logDioError(method: 'POST', url: url, error: e);
+      throw _toApiException(e);
+    }
+  }
+
   static Future<Response<dynamic>> get(
     String url, {
     Map<String, dynamic>? queryParameters,

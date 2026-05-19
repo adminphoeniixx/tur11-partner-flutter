@@ -103,7 +103,9 @@ class PayoutItem {
       amount: _money(json['amount'] ?? json['gross_amount'] ?? json['gross']),
       fee: _fee(json['fee'] ?? json['platform_fee'] ?? json['platformFee']),
       net: _net(json),
-      date: _stringValue(json['date'] ?? json['created_at'] ?? json['paid_at']),
+      date: _formatDateTime(
+        _stringValue(json['date'] ?? json['created_at'] ?? json['paid_at']),
+      ),
       status: _stringValue(json['status'], fallback: 'pending'),
     );
   }
@@ -184,4 +186,41 @@ String _net(Map<String, dynamic> json) {
     return 'Pending';
   }
   return _money(value);
+}
+
+String _formatDateTime(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return '-';
+  final date = DateTime.tryParse(text);
+  if (date == null) return text;
+  final dateText = _formatDate(date);
+  final hasTime = text.contains(':');
+  if (!hasTime) return dateText;
+  return '$dateText, ${_formatTime(date)}';
+}
+
+String _formatDate(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
+}
+
+String _formatTime(DateTime date) {
+  final hour = date.hour;
+  final minute = date.minute.toString().padLeft(2, '0');
+  final period = hour >= 12 ? 'PM' : 'AM';
+  final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+  return '$displayHour:$minute $period';
 }

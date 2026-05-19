@@ -20,7 +20,7 @@ class MatchController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   List<MatchItem> get matches => _matches;
 
-  Future<bool> load({String? status = 'open'}) async {
+  Future<bool> load({String? status}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
