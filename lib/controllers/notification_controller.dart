@@ -55,6 +55,28 @@ class NotificationController extends SafeChangeNotifier {
     }
   }
 
+  Future<bool> loadPreferences() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _preferences = await _notificationService.getPreferences();
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Unable to load notification preferences. Please try again.';
+      return false;
+    } finally {
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
   Future<bool> markRead(OwnerNotification notification) async {
     final id = notification.id;
     if (id == null || !notification.unread) return true;
@@ -89,6 +111,14 @@ class NotificationController extends SafeChangeNotifier {
     bool? cancellation,
     bool? newReview,
   }) {
+    final fields = {
+      if (newBooking != null) 'new_booking': newBooking,
+      if (paymentReceived != null) 'payment_received': paymentReceived,
+      if (cancellation != null) 'cancellation': cancellation,
+      if (newReview != null) 'new_review': newReview,
+    };
+    if (fields.isEmpty) return Future.value(true);
+
     final next = _preferences.copyWith(
       newBooking: newBooking,
       paymentReceived: paymentReceived,
@@ -96,7 +126,7 @@ class NotificationController extends SafeChangeNotifier {
       newReview: newReview,
     );
 
-    return _save(() => _notificationService.updatePreferences(next),
+    return _save(() => _notificationService.updatePreferenceFields(fields),
         nextPreferences: next);
   }
 

@@ -6,18 +6,23 @@ import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  final NotificationController? controller;
+
+  const NotificationsScreen({super.key, this.controller});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationController _controller = NotificationController();
+  late final NotificationController _controller;
+  late final bool _ownsController;
 
   @override
   void initState() {
     super.initState();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? NotificationController();
     _controller.addListener(_onChanged);
     _controller.load();
   }
@@ -25,7 +30,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void dispose() {
     _controller.removeListener(_onChanged);
-    _controller.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -50,7 +57,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 style: const TextStyle(color: AppColors.red, fontSize: 12)),
           ],
           const SizedBox(height: 14),
-          _preferencesCard(),
           if (_controller.isLoading && notifications.isEmpty)
             const Center(child: CircularProgressIndicator())
           else if (notifications.isEmpty)
@@ -73,63 +79,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
         ]),
       ),
-    );
-  }
-
-  Widget _preferencesCard() {
-    final prefs = _controller.preferences;
-
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Icon(Icons.tune, size: 17, color: AppColors.dark),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text('Notification Preferences',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-          ),
-          if (_controller.isSaving)
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-        ]),
-        const SizedBox(height: 8),
-        ToggleRow(
-          label: 'New booking',
-          subtitle: 'Booking confirmations and schedule updates',
-          value: prefs.newBooking,
-          onChanged: _controller.isSaving
-              ? null
-              : (value) => _updatePref(newBooking: value),
-        ),
-        ToggleRow(
-          label: 'Payment received',
-          subtitle: 'Payout and collection alerts',
-          value: prefs.paymentReceived,
-          onChanged: _controller.isSaving
-              ? null
-              : (value) => _updatePref(paymentReceived: value),
-        ),
-        ToggleRow(
-          label: 'Cancellation',
-          subtitle: 'Cancelled bookings and refund events',
-          value: prefs.cancellation,
-          onChanged: _controller.isSaving
-              ? null
-              : (value) => _updatePref(cancellation: value),
-        ),
-        ToggleRow(
-          label: 'New review',
-          subtitle: 'Player feedback on turfs and tournaments',
-          value: prefs.newReview,
-          onChanged: _controller.isSaving
-              ? null
-              : (value) => _updatePref(newReview: value),
-        ),
-      ]),
     );
   }
 
@@ -252,23 +201,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           : _controller.errorMessage ?? 'Unable to mark notifications read.',
       isError: !saved,
     );
-  }
-
-  Future<void> _updatePref({
-    bool? newBooking,
-    bool? paymentReceived,
-    bool? cancellation,
-    bool? newReview,
-  }) async {
-    final saved = await _controller.updatePreference(
-      newBooking: newBooking,
-      paymentReceived: paymentReceived,
-      cancellation: cancellation,
-      newReview: newReview,
-    );
-    if (!mounted || saved) return;
-    _showSnack(_controller.errorMessage ?? 'Unable to update preferences.',
-        isError: true);
   }
 
   void _showSnack(String message, {required bool isError}) {

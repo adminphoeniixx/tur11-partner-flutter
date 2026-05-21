@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../controllers/notification_controller.dart';
 import '../controllers/profile_controller.dart';
 import '../models/profile_models.dart';
 import '../theme/app_theme.dart';
@@ -19,29 +20,28 @@ class _AppShellState extends State<AppShell> {
   String _currentScreen = 'dashboard';
   final List<String> _history = [];
   final ProfileController _profileController = ProfileController();
+  final NotificationController _notificationController =
+      NotificationController();
 
-  static const Set<String> _rootScreens = {
-    'dashboard',
-    'my_turfs',
-    'bookings',
-    'payments',
-    'more',
-  };
-
-  bool get _canGoBack => _history.isNotEmpty && !_rootScreens.contains(_currentScreen);
+  bool get _canGoBack => _history.isNotEmpty;
   OwnerProfile? get _profile => _profileController.profile;
+  bool get _hasUnreadNotifications => _notificationController.unreadCount > 0;
 
   @override
   void initState() {
     super.initState();
     _profileController.addListener(_onProfileChanged);
+    _notificationController.addListener(_onProfileChanged);
     _profileController.loadProfile();
+    _notificationController.load();
   }
 
   @override
   void dispose() {
     _profileController.removeListener(_onProfileChanged);
+    _notificationController.removeListener(_onProfileChanged);
     _profileController.dispose();
+    _notificationController.dispose();
     super.dispose();
   }
 
@@ -49,14 +49,16 @@ class _AppShellState extends State<AppShell> {
     if (mounted) setState(() {});
   }
 
-  void _navigate(String screen, {bool root = false}) {
+  void _navigate(String screen) {
     if (screen == _currentScreen) return;
 
     setState(() {
-      if (root) {
-        _history.clear();
+      if (_shouldReplaceCurrent(screen)) {
+        if (_history.isNotEmpty && _history.last == screen) {
+          _history.removeLast();
+        }
       } else {
-        _history.add(_currentScreen);
+        _pushHistory(_currentScreen);
       }
       _currentScreen = screen;
     });
@@ -64,7 +66,23 @@ class _AppShellState extends State<AppShell> {
 
   void _goBack() {
     if (_history.isEmpty) return;
-    setState(() => _currentScreen = _history.removeLast());
+    setState(() {
+      String previous = _history.removeLast();
+      while (_history.isNotEmpty && previous == _currentScreen) {
+        previous = _history.removeLast();
+      }
+      _currentScreen = previous;
+    });
+  }
+
+  void _pushHistory(String screen) {
+    if (_history.isNotEmpty && _history.last == screen) return;
+    _history.add(screen);
+  }
+
+  bool _shouldReplaceCurrent(String nextScreen) {
+    return (_currentScreen == 'add_turf' && nextScreen == 'my_turfs') ||
+        (_currentScreen == 'add_tournament' && nextScreen == 'tournaments');
   }
 
   int _bottomIndexFor(String screen) {
@@ -97,7 +115,7 @@ class _AppShellState extends State<AppShell> {
 
   void _onBottomTap(int index) {
     const screens = ['dashboard', 'my_turfs', 'bookings', 'payments', 'more'];
-    _navigate(screens[index], root: true);
+    _navigate(screens[index]);
   }
 
   Widget _buildScreen() {
@@ -105,7 +123,7 @@ class _AppShellState extends State<AppShell> {
       case 'dashboard':
         return DashboardScreen(onNavigate: _navigate, profile: _profile);
       case 'notifications':
-        return const NotificationsScreen();
+        return NotificationsScreen(controller: _notificationController);
       case 'my_turfs':
         return MyTurfsScreen(onNavigate: _navigate);
       case 'add_turf':
@@ -211,22 +229,23 @@ class _AppShellState extends State<AppShell> {
                         color: AppColors.muted,
                       ),
                     ),
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: AppColors.red,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.white,
-                            width: 1.5,
+                    if (_hasUnreadNotifications)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: AppColors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.white,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -339,33 +358,35 @@ class _MoreScreen extends StatelessWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        AppCard(
-          padding: const EdgeInsets.all(12),
-          child: Row(children: [
-            AppAvatar(
-              initials: profile?.initials ?? 'TO',
-              size: 46,
-              bg: AppColors.dark,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(profile?.displayName ?? 'Owner',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 3),
-                Text(_subtitle(profile),
-                    style:
-                        const TextStyle(fontSize: 12, color: AppColors.muted)),
-              ]),
-            ),
-            IconButton(
-              onPressed: () => onNavigate('profile'),
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ]),
+        GestureDetector(
+          onTap: () => onNavigate('profile'),
+          child: AppCard(
+            padding: const EdgeInsets.all(12),
+            child: Row(children: [
+              AppAvatar(
+                initials: profile?.initials ?? 'TO',
+                size: 46,
+                bg: AppColors.dark,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(profile?.displayName ?? 'Owner',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 3),
+                      Text(_subtitle(profile),
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.muted)),
+                    ]),
+              ),
+              const Icon(Icons.chevron_right),
+            ]),
+          ),
         ),
         _group('Tournaments', [
           _MoreItem('Tournaments', Icons.emoji_events_outlined, 'tournaments'),

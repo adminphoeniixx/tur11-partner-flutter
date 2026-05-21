@@ -41,35 +41,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          LayoutBuilder(builder: (context, constraints) {
-            final compact = constraints.maxWidth < 360;
-            return Wrap(
-              spacing: 12,
-              runSpacing: 10,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                SizedBox(
-                  width:
-                      compact ? constraints.maxWidth : constraints.maxWidth - 135,
-                  child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Payments',
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.w800)),
-                        SizedBox(height: 3),
-                        Text('Revenue & payout tracking',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 12, color: AppColors.muted)),
-                      ]),
-                ),
-                PillButton.ghost('Export CSV', icon: Icons.upload),
-              ],
-            );
-          }),
+          _header(),
           if (_controller.errorMessage != null) ...[
             const SizedBox(height: 10),
             Text(
@@ -115,6 +87,31 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         ]),
       ),
     );
+  }
+
+  Widget _header() {
+    const title = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Payments',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+      SizedBox(height: 3),
+      Text('Revenue & payout tracking',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, color: AppColors.muted)),
+    ]);
+
+    return LayoutBuilder(builder: (context, constraints) {
+      if (constraints.maxWidth < 420) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [title],
+        );
+      }
+
+      return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(child: title),
+      ]);
+    });
   }
 
   Widget _stats(PayoutSummary summary) {

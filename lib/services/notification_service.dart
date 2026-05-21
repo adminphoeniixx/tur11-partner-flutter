@@ -29,4 +29,14 @@ class NotificationService {
     );
     return NotificationActionResponse.fromJson(response.data);
   }
+
+  Future<NotificationActionResponse> updatePreferenceFields(
+    Map<String, dynamic> fields,
+  ) async {
+    final response = await ApiClient.put(
+      ApiConstants.notificationPrefs,
+      data: fields,
+    );
+    return NotificationActionResponse.fromJson(response.data);
+  }
 }

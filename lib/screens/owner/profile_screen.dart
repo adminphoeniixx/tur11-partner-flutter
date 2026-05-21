@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../controllers/notification_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../models/profile_models.dart';
 import '../../theme/app_theme.dart';
@@ -16,6 +17,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late final ProfileController _controller;
+  final NotificationController _notificationController =
+      NotificationController();
   late final bool _ownsController;
 
   @override
@@ -24,17 +27,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _ownsController = widget.controller == null;
     _controller = widget.controller ?? ProfileController();
     _controller.addListener(_onProfileChanged);
+    _notificationController.addListener(_onProfileChanged);
     if (_controller.profile == null && !_controller.isLoading) {
       _controller.loadProfile();
     }
+    _notificationController.loadPreferences();
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onProfileChanged);
+    _notificationController.removeListener(_onProfileChanged);
     if (_ownsController) {
       _controller.dispose();
     }
+    _notificationController.dispose();
     super.dispose();
   }
 
@@ -47,40 +54,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final profile = _controller.profile;
 
     return RefreshIndicator(
-      onRefresh: _controller.loadProfile,
+      onRefresh: () async {
+        await Future.wait([
+          _controller.loadProfile(),
+          _notificationController.loadPreferences(),
+        ]);
+      },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              const SizedBox(
-                width: 230,
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Business Profile',
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.w800)),
-                      SizedBox(height: 3),
-                      Text('Manage your owner account details',
-                          style:
-                              TextStyle(fontSize: 12, color: AppColors.muted)),
-                    ]),
-              ),
-              PillButton.green(
-                _controller.isSaving ? 'Saving...' : 'Edit Profile',
-                icon: Icons.edit,
-                onPressed: _controller.isSaving || profile == null
-                    ? null
-                    : () => _showEditProfileDialog(profile),
-              ),
-            ],
-          ),
+          _header(profile),
           const SizedBox(height: 14),
           if (_controller.isLoading && profile == null)
             const Center(
@@ -155,21 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _infoRow(Icons.business, _value(profile.businessName)),
         ]),
       ),
-      const AppCard(
-        padding: EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Notification Preferences',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-          SizedBox(height: 12),
-          ToggleRow(label: 'New booking alerts', value: true),
-          Divider(color: AppColors.border),
-          ToggleRow(label: 'Payment received', value: true),
-          Divider(color: AppColors.border),
-          ToggleRow(label: 'Cancellation alerts', value: true),
-          Divider(color: AppColors.border),
-          ToggleRow(label: 'New reviews', value: true),
-        ]),
-      ),
+      _notificationPreferencesCard(),
       AppCard(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -184,12 +154,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisSpacing: 10,
             childAspectRatio: 1.85,
             children: [
-              _miniStat('Total Turfs', _statValue(profile, 'total_turfs', '3')),
-              _miniStat('Bookings', _statValue(profile, 'bookings', '486')),
-              _miniStat('Revenue', _statValue(profile, 'revenue', 'Rs 1.24L'),
-                  color: AppColors.green),
-              _miniStat('Rating', _statValue(profile, 'rating', '4.2'),
-                  color: AppColors.green),
+              _miniStat(
+                'Total Turfs',
+                _statValue(profile, const ['total_turfs', 'turfs'], '3'),
+              ),
+              _miniStat(
+                'Bookings',
+                _statValue(profile, const ['total_bookings', 'bookings'], '486'),
+              ),
+              _miniStat(
+                'Revenue',
+                _revenueValue(profile),
+                color: AppColors.green,
+              ),
+              _miniStat(
+                'Rating',
+                _statValue(profile, const ['avg_rating', 'rating'], '4.2'),
+                color: AppColors.green,
+              ),
             ],
           ),
         ]),
@@ -219,6 +201,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ];
   }
 
+  Widget _header(OwnerProfile? profile) {
+    final title = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Business Profile',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 3),
+      const Text('Manage your owner account details',
+          style: TextStyle(fontSize: 12, color: AppColors.muted)),
+    ]);
+
+    final editButton = PillButton.green(
+      _controller.isSaving ? 'Saving...' : 'Edit Profile',
+      icon: Icons.edit,
+      onPressed: _controller.isSaving || profile == null
+          ? null
+          : () => _showEditProfileDialog(profile),
+    );
+
+    return LayoutBuilder(builder: (context, constraints) {
+      if (constraints.maxWidth < 420) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            title,
+            const SizedBox(height: 12),
+            Align(alignment: Alignment.centerLeft, child: editButton),
+          ],
+        );
+      }
+
+      return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(child: title),
+        const SizedBox(width: 12),
+        editButton,
+      ]);
+    });
+  }
+
   Widget _errorCard(String message) {
     return AppCard(
       padding: const EdgeInsets.all(16),
@@ -235,6 +254,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onPressed: _controller.loadProfile,
         ),
       ]),
+    );
+  }
+
+  Widget _notificationPreferencesCard() {
+    final prefs = _notificationController.preferences;
+    final isBusy =
+        _notificationController.isLoading || _notificationController.isSaving;
+
+    return AppCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Expanded(
+            child: Text('Notification Preferences',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          ),
+          if (isBusy)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+        ]),
+        if (_notificationController.errorMessage != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _notificationController.errorMessage!,
+            style: const TextStyle(color: AppColors.red, fontSize: 12),
+          ),
+        ],
+        const SizedBox(height: 12),
+        ToggleRow(
+          label: 'New booking alerts',
+          value: prefs.newBooking,
+          onChanged:
+              isBusy ? null : (value) => _updatePref(newBooking: value),
+        ),
+        const Divider(color: AppColors.border),
+        ToggleRow(
+          label: 'Payment received',
+          value: prefs.paymentReceived,
+          onChanged:
+              isBusy ? null : (value) => _updatePref(paymentReceived: value),
+        ),
+        const Divider(color: AppColors.border),
+        ToggleRow(
+          label: 'Cancellation alerts',
+          value: prefs.cancellation,
+          onChanged:
+              isBusy ? null : (value) => _updatePref(cancellation: value),
+        ),
+        const Divider(color: AppColors.border),
+        ToggleRow(
+          label: 'New reviews',
+          value: prefs.newReview,
+          onChanged: isBusy ? null : (value) => _updatePref(newReview: value),
+        ),
+      ]),
+    );
+  }
+
+  Future<void> _updatePref({
+    bool? newBooking,
+    bool? paymentReceived,
+    bool? cancellation,
+    bool? newReview,
+  }) async {
+    final saved = await _notificationController.updatePreference(
+      newBooking: newBooking,
+      paymentReceived: paymentReceived,
+      cancellation: cancellation,
+      newReview: newReview,
+    );
+    if (!mounted || saved) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _notificationController.errorMessage ??
+              'Unable to update notification preferences.',
+        ),
+        backgroundColor: AppColors.red,
+      ),
     );
   }
 
@@ -460,10 +561,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return '${_value(name)} ****${account.substring(account.length - 4)}';
   }
 
-  String _statValue(OwnerProfile profile, String key, String fallback) {
+  String _statValue(OwnerProfile profile, List<String> keys, String fallback) {
     final stats = profile.data['stats'];
-    if (stats is Map && stats[key] != null) return stats[key].toString();
-    final value = profile.data[key];
-    return value == null ? fallback : value.toString();
+    for (final key in keys) {
+      if (stats is Map && stats[key] != null) return stats[key].toString();
+      final value = profile.data[key];
+      if (value != null) return value.toString();
+    }
+    return fallback;
+  }
+
+  String _revenueValue(OwnerProfile profile) {
+    final value = _statValue(
+      profile,
+      const ['total_revenue', 'revenue'],
+      'Rs 1.24L',
+    );
+    if (value.startsWith('Rs')) return value;
+    return 'Rs $value';
   }
 }
