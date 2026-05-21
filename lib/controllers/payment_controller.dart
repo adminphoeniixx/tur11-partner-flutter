@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/payment_models.dart';
 import '../services/payment_service.dart';
+import 'safe_change_notifier.dart';
 
-class PaymentController extends ChangeNotifier {
+class PaymentController extends SafeChangeNotifier {
   final PaymentService _paymentService;
 
   PaymentController({PaymentService? paymentService})
@@ -30,6 +29,7 @@ class PaymentController extends ChangeNotifier {
         _paymentService.getPayoutSummary(),
         _paymentService.getPayouts(status: status),
       ]);
+      if (isDisposed) return false;
       _summary = results[0] as PayoutSummary;
       _payouts = (results[1] as PayoutListResponse).payouts;
       return true;
@@ -40,8 +40,10 @@ class PaymentController extends ChangeNotifier {
       _errorMessage = 'Unable to load payments. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

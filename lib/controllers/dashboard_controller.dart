@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/dashboard_models.dart';
 import '../services/dashboard_service.dart';
+import 'safe_change_notifier.dart';
 
-class DashboardController extends ChangeNotifier {
+class DashboardController extends SafeChangeNotifier {
   final DashboardService _dashboardService;
 
   DashboardController({DashboardService? dashboardService})
@@ -30,6 +29,7 @@ class DashboardController extends ChangeNotifier {
         _dashboardService.getDashboard(),
         _dashboardService.getOccupancy(),
       ]);
+      if (isDisposed) return false;
       _dashboard = results[0] as DashboardData;
       _occupancy = results[1] as List<OccupancyItem>;
       return true;
@@ -40,8 +40,10 @@ class DashboardController extends ChangeNotifier {
       _errorMessage = 'Unable to load dashboard. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

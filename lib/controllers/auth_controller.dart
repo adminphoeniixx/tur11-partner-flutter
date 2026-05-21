@@ -1,11 +1,10 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/auth_models.dart';
 import '../services/auth_service.dart';
 import '../core/storage_service.dart';
+import 'safe_change_notifier.dart';
 
-class AuthController extends ChangeNotifier {
+class AuthController extends SafeChangeNotifier {
   final AuthService _authService;
 
   AuthController({AuthService? authService})
@@ -110,6 +109,7 @@ class AuthController extends ChangeNotifier {
   }
 
   void clearError() {
+    if (isDisposed) return;
     _errorMessage = null;
     notifyListeners();
   }
@@ -133,6 +133,7 @@ class AuthController extends ChangeNotifier {
 
     try {
       await action();
+      if (isDisposed) return false;
       return true;
     } on ApiException catch (error) {
       _errorMessage = error.message;
@@ -141,8 +142,10 @@ class AuthController extends ChangeNotifier {
       _errorMessage = 'Something went wrong. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

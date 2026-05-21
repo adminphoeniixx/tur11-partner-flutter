@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/review_models.dart';
 import '../services/review_service.dart';
+import 'safe_change_notifier.dart';
 
-class ReviewController extends ChangeNotifier {
+class ReviewController extends SafeChangeNotifier {
   final ReviewService _reviewService;
 
   ReviewController({ReviewService? reviewService})
@@ -33,6 +32,7 @@ class ReviewController extends ChangeNotifier {
 
     try {
       final response = await _reviewService.getReviews();
+      if (isDisposed) return false;
       _reviews = response.reviews;
       _summary = response.summary;
       return true;
@@ -43,8 +43,10 @@ class ReviewController extends ChangeNotifier {
       _errorMessage = 'Unable to load reviews. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -58,6 +60,7 @@ class ReviewController extends ChangeNotifier {
         reviewId,
         ReviewReplyRequest(reply: reply),
       );
+      if (isDisposed) return false;
       await load();
       return true;
     } on ApiException catch (error) {
@@ -67,8 +70,10 @@ class ReviewController extends ChangeNotifier {
       _errorMessage = 'Unable to reply to review. Please try again.';
       return false;
     } finally {
-      _isSaving = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
     }
   }
 }

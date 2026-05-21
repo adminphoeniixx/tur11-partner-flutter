@@ -50,7 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onRefresh: _controller.load,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(12, 12, 12, isPhone ? 78 : 16),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _header(dashboard, isPhone),
           if (_controller.errorMessage != null) ...[
@@ -71,37 +71,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _header(DashboardData dashboard, bool isPhone) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    final title = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(
+        'Good morning, ${_shortName(widget.profile)}!',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          color: AppColors.dark,
+        ),
+      ),
+      const SizedBox(height: 3),
+      Text(
+        '${dashboard.activeTurfs} active turfs${_cityText(widget.profile)}',
+        style: const TextStyle(fontSize: 12, color: AppColors.muted),
+      ),
+    ]);
+
+    final addButton = PillButton.green(
+      'Add Turf',
+      icon: Icons.add,
+      onPressed: () => widget.onNavigate('add_turf'),
+    );
+
+    if (isPhone) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          title,
+          const SizedBox(height: 12),
+          Align(alignment: Alignment.centerLeft, child: addButton),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SizedBox(
-          width: isPhone ? double.infinity : 280,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(
-              'Good morning, ${_shortName(widget.profile)}!',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.dark,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              '${dashboard.activeTurfs} active turfs${_cityText(widget.profile)}',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
-            ),
-          ]),
-        ),
-        PillButton.green(
-          'Add Turf',
-          icon: Icons.add,
-          onPressed: () => widget.onNavigate('add_turf'),
-        ),
+        Expanded(child: title),
+        const SizedBox(width: 12),
+        addButton,
       ],
     );
   }
@@ -360,7 +370,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(child: _quickActions()),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(child: _occupancy()),
         ],
       );

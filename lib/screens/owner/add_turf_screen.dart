@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:image_picker/image_picker.dart';
@@ -161,8 +163,8 @@ class _AddTurfScreenState extends State<AddTurfScreen> {
                   ),
                 ),
               ]),
-              _mediaSummary('Photos', _photos),
-              _mediaSummary('Videos', _videos),
+              _photoPreview(),
+              _videoPreview(),
             ],
           ),
           _section(
@@ -398,7 +400,7 @@ class _AddTurfScreenState extends State<AddTurfScreen> {
     controller.text = _displayTime(picked);
   }
 
-  Widget _mediaSummary(String label, List<XFile> files) {
+  Widget _photoPreview() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -408,27 +410,166 @@ class _AddTurfScreenState extends State<AddTurfScreen> {
         border: Border.all(color: AppColors.border),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('$label (${files.length})',
+        Text('Photos (${_photos.length})',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-        if (files.isEmpty)
+        if (_photos.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 4),
             child: Text('No file selected',
                 style: TextStyle(fontSize: 11, color: AppColors.muted)),
           )
-        else
-          ...files.map(
-            (file) => Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                _fileName(file.path),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+        else ...[
+          const SizedBox(height: 10),
+          LayoutBuilder(builder: (context, constraints) {
+            final columns = constraints.maxWidth > 520 ? 4 : 3;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _photos.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 1,
               ),
+              itemBuilder: (context, index) => _photoTile(_photos[index], index),
+            );
+          }),
+        ],
+      ]),
+    );
+  }
+
+  Widget _photoTile(XFile photo, int index) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Stack(fit: StackFit.expand, children: [
+        Image.file(
+          File(photo.path),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: AppColors.border,
+              alignment: Alignment.center,
+              child: const Icon(Icons.broken_image_outlined,
+                  color: AppColors.muted),
+            );
+          },
+        ),
+        Positioned(
+          right: 4,
+          top: 4,
+          child: _removeMediaButton(() {
+            setState(() => _photos.removeAt(index));
+          }),
+        ),
+        Positioned(
+          left: 6,
+          right: 6,
+          bottom: 5,
+          child: Text(
+            _fileName(photo.path),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              shadows: [Shadow(color: Colors.black, blurRadius: 4)],
             ),
           ),
+        ),
       ]),
+    );
+  }
+
+  Widget _videoPreview() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.bg2,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Videos (${_videos.length})',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+        if (_videos.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text('No file selected',
+                style: TextStyle(fontSize: 11, color: AppColors.muted)),
+          )
+        else ...[
+          const SizedBox(height: 8),
+          ...List.generate(_videos.length, (index) {
+            final video = _videos[index];
+            return Container(
+              margin:
+                  EdgeInsets.only(bottom: index == _videos.length - 1 ? 0 : 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppColors.greenLt,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.play_circle_outline,
+                      color: AppColors.green),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _fileName(video.path),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text('Ready to upload',
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.muted)),
+                      ]),
+                ),
+                IconButton(
+                  onPressed: () => setState(() => _videos.removeAt(index)),
+                  icon: const Icon(Icons.close, size: 18),
+                  color: AppColors.red,
+                  tooltip: 'Remove video',
+                ),
+              ]),
+            );
+          }),
+        ],
+      ]),
+    );
+  }
+
+  Widget _removeMediaButton(VoidCallback onPressed) {
+    return Material(
+      color: Colors.black.withOpacity(0.62),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: const SizedBox(
+          width: 26,
+          height: 26,
+          child: Icon(Icons.close, size: 15, color: Colors.white),
+        ),
+      ),
     );
   }
 

@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/booking_models.dart';
 import '../services/booking_service.dart';
+import 'safe_change_notifier.dart';
 
-class BookingController extends ChangeNotifier {
+class BookingController extends SafeChangeNotifier {
   final BookingService _bookingService;
 
   BookingController({BookingService? bookingService})
@@ -30,6 +29,7 @@ class BookingController extends ChangeNotifier {
         status: status,
         turfId: turfId,
       );
+      if (isDisposed) return false;
       _bookings = response.bookings;
       _stats = response.stats;
       return true;
@@ -40,13 +40,15 @@ class BookingController extends ChangeNotifier {
       _errorMessage = 'Unable to load bookings. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }
 
-class CancellationController extends ChangeNotifier {
+class CancellationController extends SafeChangeNotifier {
   final BookingService _bookingService;
 
   CancellationController({BookingService? bookingService})
@@ -67,6 +69,7 @@ class CancellationController extends ChangeNotifier {
 
     try {
       final response = await _bookingService.getCancellations();
+      if (isDisposed) return false;
       _cancellations = response.cancellations;
       return true;
     } on ApiException catch (error) {
@@ -76,8 +79,10 @@ class CancellationController extends ChangeNotifier {
       _errorMessage = 'Unable to load cancellations. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

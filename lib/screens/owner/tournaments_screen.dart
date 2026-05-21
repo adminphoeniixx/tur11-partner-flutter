@@ -307,7 +307,7 @@ class _TournamentsScreenState extends State<TournamentsScreen> {
       },
     );
 
-    for (final controller in [
+    disposeDialogControllers([
       matchNo,
       scoreA,
       oversA,
@@ -316,9 +316,7 @@ class _TournamentsScreenState extends State<TournamentsScreen> {
       winnerId,
       winnerName,
       resultText,
-    ]) {
-      controller.dispose();
-    }
+    ]);
 
     if (request == null) return;
     _runAction(
@@ -367,10 +365,12 @@ class _TournamentsScreenState extends State<TournamentsScreen> {
       },
     );
 
-    winnerTeamId.dispose();
-    winnerName.dispose();
-    runnerTeamId.dispose();
-    runnerName.dispose();
+    disposeDialogControllers([
+      winnerTeamId,
+      winnerName,
+      runnerTeamId,
+      runnerName,
+    ]);
 
     if (request == null) return;
     _runAction(_controller.complete(tournamentId, request), 'Tournament completed.');

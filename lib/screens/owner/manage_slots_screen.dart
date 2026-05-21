@@ -312,7 +312,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
         );
       },
     );
-    turfId.dispose();
+    disposeDialogControllers([turfId]);
     if (id == null) return;
     setState(() => _selectedTurfId = id);
     await _loadSlots();
@@ -361,9 +361,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       },
     );
 
-    from.dispose();
-    to.dispose();
-    duration.dispose();
+    disposeDialogControllers([from, to, duration]);
 
     if (request == null) return;
     final saved = await _slotController.generate(request);
@@ -396,7 +394,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
         );
       },
     );
-    reason.dispose();
+    disposeDialogControllers([reason]);
     if (value == null) return;
     final saved = await _slotController.block(
       slotIds: _selectedSlotIds.toList(),
@@ -436,7 +434,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
         );
       },
     );
-    price.dispose();
+    disposeDialogControllers([price]);
     if (value == null) return;
     final saved = await _slotController.updatePrice(
       slotIds: _selectedSlotIds.toList(),
@@ -634,7 +632,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       },
     );
 
-    streamUrl.dispose();
+    disposeDialogControllers([streamUrl]);
     if (request == null) return;
     final saved = await _matchController.updateStream(matchId, request);
     if (!mounted) return;
@@ -813,7 +811,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       },
     );
 
-    for (final controller in [
+    disposeDialogControllers([
       teamAName,
       teamBName,
       teamAScore,
@@ -829,9 +827,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       requiredRunRate,
       period,
       result,
-    ]) {
-      controller.dispose();
-    }
+    ]);
 
     if (request == null || match.id == null) return;
     final saved = await _matchController.updateScoreboard(match.id!, request);
@@ -905,10 +901,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       },
     );
 
-    text.dispose();
-    over.dispose();
-    minute.dispose();
-    playerName.dispose();
+    disposeDialogControllers([text, over, minute, playerName]);
 
     if (request == null) return;
     final saved = await _matchController.addCommentary(matchId, request);
@@ -940,7 +933,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       },
     );
 
-    commentaryId.dispose();
+    disposeDialogControllers([commentaryId]);
     if (id == null) return;
     final saved = await _matchController.deleteCommentary(matchId, id);
     if (!mounted) return;
@@ -1015,14 +1008,16 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       },
     );
 
-    title.dispose();
-    sport.dispose();
-    turfId.dispose();
-    date.dispose();
-    start.dispose();
-    end.dispose();
-    maxPlayers.dispose();
-    fee.dispose();
+    disposeDialogControllers([
+      title,
+      sport,
+      turfId,
+      date,
+      start,
+      end,
+      maxPlayers,
+      fee,
+    ]);
 
     if (request == null) return;
     final saved = await _matchController.createMatch(request);

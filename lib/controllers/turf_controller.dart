@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/turf_models.dart';
 import '../services/turf_service.dart';
+import 'safe_change_notifier.dart';
 
-class TurfController extends ChangeNotifier {
+class TurfController extends SafeChangeNotifier {
   final TurfService _turfService;
 
   TurfController({TurfService? turfService})
@@ -27,6 +26,7 @@ class TurfController extends ChangeNotifier {
 
     try {
       final response = await _turfService.getTurfs();
+      if (isDisposed) return false;
       _turfs = response.turfs;
       return true;
     } on ApiException catch (error) {
@@ -36,8 +36,10 @@ class TurfController extends ChangeNotifier {
       _errorMessage = 'Unable to load turfs. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -89,8 +91,10 @@ class TurfController extends ChangeNotifier {
 
     try {
       await action();
+      if (isDisposed) return false;
       if (reload) {
         final response = await _turfService.getTurfs();
+        if (isDisposed) return false;
         _turfs = response.turfs;
       }
       return true;
@@ -101,8 +105,10 @@ class TurfController extends ChangeNotifier {
       _errorMessage = 'Unable to save turf changes. Please try again.';
       return false;
     } finally {
-      _isSaving = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
     }
   }
 }

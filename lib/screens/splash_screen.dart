@@ -54,8 +54,9 @@ class _SplashScreenState extends State<SplashScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Turf11PartnerLogo(
+                    showText: false,
                     light: true,
-                    markSize: 88,
+                    markSize: 120,
                     textSize: 30,
                   ),
                 ],
@@ -67,7 +68,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-
-
-
-

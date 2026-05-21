@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/profile_models.dart';
 import '../services/profile_service.dart';
+import 'safe_change_notifier.dart';
 
-class ProfileController extends ChangeNotifier {
+class ProfileController extends SafeChangeNotifier {
   final ProfileService _profileService;
 
   ProfileController({ProfileService? profileService})
@@ -28,7 +27,9 @@ class ProfileController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _profile = await _profileService.getProfile();
+      final profile = await _profileService.getProfile();
+      if (isDisposed) return false;
+      _profile = profile;
       return true;
     } on ApiException catch (error) {
       _errorMessage = error.message;
@@ -37,8 +38,10 @@ class ProfileController extends ChangeNotifier {
       _errorMessage = 'Unable to load profile. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -70,6 +73,7 @@ class ProfileController extends ChangeNotifier {
 
     try {
       await action();
+      if (isDisposed) return false;
       return true;
     } on ApiException catch (error) {
       _errorMessage = error.message;
@@ -78,8 +82,10 @@ class ProfileController extends ChangeNotifier {
       _errorMessage = 'Unable to save changes. Please try again.';
       return false;
     } finally {
-      _isSaving = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
     }
   }
 }

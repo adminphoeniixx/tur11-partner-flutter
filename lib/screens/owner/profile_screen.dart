@@ -281,10 +281,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
 
-    name.dispose();
-    businessName.dispose();
-    email.dispose();
-    city.dispose();
+    disposeDialogControllers([name, businessName, email, city]);
 
     if (request == null) return;
     final saved = await _controller.updateProfile(request);
@@ -339,11 +336,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
 
-    accountNumber.dispose();
-    bankName.dispose();
-    ifsc.dispose();
-    upiId.dispose();
-    accountHolder.dispose();
+    disposeDialogControllers([
+      accountNumber,
+      bankName,
+      ifsc,
+      upiId,
+      accountHolder,
+    ]);
 
     if (request == null) return;
     final saved = await _controller.updateBankDetails(request);

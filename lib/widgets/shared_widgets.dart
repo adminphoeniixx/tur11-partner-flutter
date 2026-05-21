@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
+void disposeDialogControllers(List<TextEditingController> controllers) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future<void>.delayed(const Duration(milliseconds: 350), () {
+      for (final controller in controllers) {
+        controller.dispose();
+      }
+    });
+  });
+}
+
 class Turf11PartnerLogo extends StatelessWidget {
   final bool light;
   final bool showMark;
@@ -29,24 +39,17 @@ class Turf11PartnerLogo extends StatelessWidget {
       mainAxisSize: mainAxisSize,
       children: [
         if (showMark) ...[
-          Container(
+          SizedBox(
             width: markSize,
             height: markSize,
-            decoration: BoxDecoration(
-              color: AppColors.green,
-              borderRadius: BorderRadius.circular(markSize * 0.3),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.green.withOpacity(light ? 0.35 : 0.18),
-                  blurRadius: markSize * 0.32,
-                  offset: Offset(0, markSize * 0.12),
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.sports_cricket,
-              size: markSize * 0.48,
-              color: Colors.white,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(markSize * 0.2),
+              child: Image.asset(
+                'assets/images/turf11_partner_logo.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                semanticLabel: 'Turf11 Partner',
+              ),
             ),
           ),
           if (showText) SizedBox(width: markSize * 0.22),
@@ -674,6 +677,7 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       margin: margin ?? const EdgeInsets.only(bottom: 12),
       padding: padding ?? const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -797,17 +801,19 @@ class UploadZone extends StatelessWidget {
   final String label;
   final String? subtitle;
   final IconData icon;
+  final VoidCallback? onTap;
 
   const UploadZone(
       {super.key,
       required this.label,
       this.subtitle,
-      this.icon = Icons.cloud_upload_outlined});
+      this.icon = Icons.cloud_upload_outlined,
+      this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),

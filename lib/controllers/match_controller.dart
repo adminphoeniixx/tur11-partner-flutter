@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/match_models.dart';
 import '../services/match_service.dart';
+import 'safe_change_notifier.dart';
 
-class MatchController extends ChangeNotifier {
+class MatchController extends SafeChangeNotifier {
   final MatchService _matchService;
 
   MatchController({MatchService? matchService})
@@ -27,6 +26,7 @@ class MatchController extends ChangeNotifier {
 
     try {
       final response = await _matchService.getMatches(status: status);
+      if (isDisposed) return false;
       _matches = response.matches;
       return true;
     } on ApiException catch (error) {
@@ -36,8 +36,10 @@ class MatchController extends ChangeNotifier {
       _errorMessage = 'Unable to load matches. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -48,6 +50,7 @@ class MatchController extends ChangeNotifier {
 
     try {
       await _matchService.createMatch(request);
+      if (isDisposed) return false;
       await load();
       return true;
     } on ApiException catch (error) {
@@ -57,8 +60,10 @@ class MatchController extends ChangeNotifier {
       _errorMessage = 'Unable to create match. Please try again.';
       return false;
     } finally {
-      _isSaving = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -75,7 +80,9 @@ class MatchController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      return await _matchService.getStream(matchId);
+      final stream = await _matchService.getStream(matchId);
+      if (isDisposed) return null;
+      return stream;
     } on ApiException catch (error) {
       _errorMessage = error.message;
       return null;
@@ -83,8 +90,10 @@ class MatchController extends ChangeNotifier {
       _errorMessage = 'Unable to get stream info. Please try again.';
       return null;
     } finally {
-      _isSaving = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -136,6 +145,7 @@ class MatchController extends ChangeNotifier {
 
     try {
       await action();
+      if (isDisposed) return false;
       return true;
     } on ApiException catch (error) {
       _errorMessage = error.message;
@@ -144,8 +154,10 @@ class MatchController extends ChangeNotifier {
       _errorMessage = fallback;
       return false;
     } finally {
-      _isSaving = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
     }
   }
 }

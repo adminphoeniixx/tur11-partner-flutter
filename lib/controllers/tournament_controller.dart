@@ -1,11 +1,10 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/review_models.dart';
 import '../models/tournament_models.dart';
 import '../services/tournament_service.dart';
+import 'safe_change_notifier.dart';
 
-class TournamentController extends ChangeNotifier {
+class TournamentController extends SafeChangeNotifier {
   final TournamentService _service;
 
   TournamentController({TournamentService? service})
@@ -28,6 +27,7 @@ class TournamentController extends ChangeNotifier {
 
     try {
       final response = await _service.getTournaments();
+      if (isDisposed) return false;
       _tournaments = response.tournaments;
       return true;
     } on ApiException catch (error) {
@@ -37,8 +37,10 @@ class TournamentController extends ChangeNotifier {
       _errorMessage = 'Unable to load tournaments. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -80,8 +82,10 @@ class TournamentController extends ChangeNotifier {
 
     try {
       await action();
+      if (isDisposed) return false;
       if (reload) {
         final response = await _service.getTournaments();
+        if (isDisposed) return false;
         _tournaments = response.tournaments;
       }
       return true;
@@ -92,13 +96,15 @@ class TournamentController extends ChangeNotifier {
       _errorMessage = 'Unable to save tournament changes. Please try again.';
       return false;
     } finally {
-      _isSaving = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
     }
   }
 }
 
-class TournamentTeamsController extends ChangeNotifier {
+class TournamentTeamsController extends SafeChangeNotifier {
   final TournamentService _service;
 
   TournamentTeamsController({TournamentService? service})
@@ -119,6 +125,7 @@ class TournamentTeamsController extends ChangeNotifier {
 
     try {
       final response = await _service.getTeams(tournamentId);
+      if (isDisposed) return false;
       _teams = response.teams;
       return true;
     } on ApiException catch (error) {
@@ -128,13 +135,15 @@ class TournamentTeamsController extends ChangeNotifier {
       _errorMessage = 'Unable to load team registrations. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }
 
-class TournamentReviewsController extends ChangeNotifier {
+class TournamentReviewsController extends SafeChangeNotifier {
   final TournamentService _service;
 
   TournamentReviewsController({TournamentService? service})
@@ -155,6 +164,7 @@ class TournamentReviewsController extends ChangeNotifier {
 
     try {
       final response = await _service.getReviews(tournamentId);
+      if (isDisposed) return false;
       _reviews = response.reviews;
       return true;
     } on ApiException catch (error) {
@@ -164,8 +174,10 @@ class TournamentReviewsController extends ChangeNotifier {
       _errorMessage = 'Unable to load tournament reviews. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

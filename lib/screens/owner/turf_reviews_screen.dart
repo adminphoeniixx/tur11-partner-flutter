@@ -249,7 +249,7 @@ class _TurfReviewsScreenState extends State<TurfReviewsScreen> {
         );
       },
     );
-    textController.dispose();
+    disposeDialogControllers([textController]);
 
     if (reply == null || reply.trim().isEmpty || review.id == null) return;
     final saved = await _controller.replyToReview(review.id!, reply);

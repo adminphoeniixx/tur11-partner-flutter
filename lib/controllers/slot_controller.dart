@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 import '../core/api_client.dart';
 import '../models/slot_models.dart';
 import '../services/slot_service.dart';
+import 'safe_change_notifier.dart';
 
-class SlotController extends ChangeNotifier {
+class SlotController extends SafeChangeNotifier {
   final SlotService _slotService;
 
   SlotController({SlotService? slotService})
@@ -31,6 +30,7 @@ class SlotController extends ChangeNotifier {
 
     try {
       final response = await _slotService.getSlots(turfId: turfId, date: date);
+      if (isDisposed) return false;
       _slots = response.slots;
       return true;
     } on ApiException catch (error) {
@@ -40,8 +40,10 @@ class SlotController extends ChangeNotifier {
       _errorMessage = 'Unable to load slots. Please try again.';
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -83,11 +85,13 @@ class SlotController extends ChangeNotifier {
 
     try {
       await action();
+      if (isDisposed) return false;
       final reloadTurfId = turfId ?? _turfId;
       final reloadDate = date ?? _date;
       if (reloadTurfId != null && reloadDate != null) {
         final response =
             await _slotService.getSlots(turfId: reloadTurfId, date: reloadDate);
+        if (isDisposed) return false;
         _slots = response.slots;
         _turfId = reloadTurfId;
         _date = reloadDate;
@@ -100,8 +104,10 @@ class SlotController extends ChangeNotifier {
       _errorMessage = 'Unable to save slot changes. Please try again.';
       return false;
     } finally {
-      _isSaving = false;
-      notifyListeners();
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
     }
   }
 }

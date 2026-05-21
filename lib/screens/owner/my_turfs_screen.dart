@@ -47,39 +47,7 @@ class _MyTurfsScreenState extends State<MyTurfsScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          LayoutBuilder(builder: (context, constraints) {
-            final compact = constraints.maxWidth < 360;
-            return Wrap(
-              spacing: 12,
-              runSpacing: 10,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                SizedBox(
-                  width:
-                      compact ? constraints.maxWidth : constraints.maxWidth - 120,
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('My Turfs',
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${_controller.turfs.length} turfs - $active active - $pending pending',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.muted),
-                        ),
-                      ]),
-                ),
-                PillButton.green('Add Turf',
-                    icon: Icons.add,
-                    onPressed: () => widget.onNavigate('add_turf')),
-              ],
-            );
-          }),
+          _header(active: active, pending: pending),
           if (_controller.errorMessage != null) ...[
             const SizedBox(height: 10),
             Text(_controller.errorMessage!,
@@ -119,6 +87,47 @@ class _MyTurfsScreenState extends State<MyTurfsScreen> {
             ..._controller.turfs.map(_turfCard),
         ]),
       ),
+    );
+  }
+
+  Widget _header({required int active, required int pending}) {
+    final title = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('My Turfs',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 3),
+      Text(
+        '${_controller.turfs.length} turfs - $active active - $pending pending',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 12, color: AppColors.muted),
+      ),
+    ]);
+
+    final addButton = PillButton.green(
+      'Add Turf',
+      icon: Icons.add,
+      onPressed: () => widget.onNavigate('add_turf'),
+    );
+
+    final isPhone = MediaQuery.sizeOf(context).width < 600;
+    if (isPhone) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          title,
+          const SizedBox(height: 12),
+          Align(alignment: Alignment.centerLeft, child: addButton),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: title),
+        const SizedBox(width: 12),
+        addButton,
+      ],
     );
   }
 
@@ -240,52 +249,11 @@ class _MyTurfsScreenState extends State<MyTurfsScreen> {
   }
 
   Future<void> _showEditDialog(TurfItem turf) async {
-    final name = TextEditingController(text: turf.name);
-    final weekday = TextEditingController(text: _priceNumber(turf.pricePerHour));
-    final weekend = TextEditingController(text: _priceNumber(turf.priceWeekend));
-    final amenities = TextEditingController(text: turf.amenities.join(', '));
-
     final request = await showDialog<UpdateTurfRequest>(
       context: context,
-      builder: (context) {
-        return ResponsiveAlertDialog(
-          title: const Text('Edit Turf'),
-          content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              _dialogField('Name', name),
-              _dialogField('Weekday Price', weekday,
-                  keyboardType: TextInputType.number),
-              _dialogField('Weekend Price', weekend,
-                  keyboardType: TextInputType.number),
-              _dialogField('Amenities', amenities),
-            ]),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(
-                context,
-                UpdateTurfRequest(
-                  name: name.text.trim(),
-                  pricePerHour: weekday.text.trim(),
-                  priceWeekend: weekend.text.trim(),
-                  amenities: _csv(amenities.text),
-                ),
-              ),
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => _EditTurfDialog(turf: turf),
     );
 
-    name.dispose();
-    weekday.dispose();
-    weekend.dispose();
-    amenities.dispose();
     if (request == null || turf.id == null) return;
     final saved = await _controller.update(turf.id!, request);
     if (!mounted) return;
@@ -388,47 +356,10 @@ class _MyTurfsScreenState extends State<MyTurfsScreen> {
   }
 
   Future<void> _showRemoveMediaDialog(TurfItem turf) async {
-    final url = TextEditingController();
-    var type = 'photo';
     final result = await showDialog<_MediaAction>(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setDialogState) {
-          return ResponsiveAlertDialog(
-            title: const Text('Remove Media'),
-            content: Column(mainAxisSize: MainAxisSize.min, children: [
-              DropdownButtonFormField<String>(
-                value: type,
-                decoration: const InputDecoration(labelText: 'Type'),
-                items: const [
-                  DropdownMenuItem(value: 'photo', child: Text('Photo')),
-                  DropdownMenuItem(value: 'video', child: Text('Video')),
-                ],
-                onChanged: (value) {
-                  if (value != null) setDialogState(() => type = value);
-                },
-              ),
-              const SizedBox(height: 12),
-              _dialogField('URL', url, keyboardType: TextInputType.url),
-            ]),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(
-                  context,
-                  _MediaAction(action: 'remove', type: type, url: url.text),
-                ),
-                child: const Text('Remove'),
-              ),
-            ],
-          );
-        });
-      },
+      builder: (context) => const _RemoveMediaDialog(),
     );
-    url.dispose();
     if (result == null || turf.id == null || result.url.isEmpty) return;
     final saved = await _controller.removeMedia(
       turfId: turf.id!,
@@ -452,21 +383,6 @@ class _MyTurfsScreenState extends State<MyTurfsScreen> {
             ? successMessage
             : _controller.errorMessage ?? 'Unable to save changes.'),
         backgroundColor: success ? AppColors.green : AppColors.red,
-      ),
-    );
-  }
-
-  Widget _dialogField(
-    String label,
-    TextEditingController controller, {
-    TextInputType? keyboardType,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(labelText: label),
       ),
     );
   }
@@ -499,18 +415,155 @@ class _MyTurfsScreenState extends State<MyTurfsScreen> {
             : '${part.substring(0, 1).toUpperCase()}${part.substring(1).toLowerCase()}')
         .join(' ');
   }
+}
 
-  List<String> _csv(String value) {
-    return value
-        .split(',')
-        .map((item) => item.trim())
-        .where((item) => item.isNotEmpty)
-        .toList();
+class _EditTurfDialog extends StatefulWidget {
+  final TurfItem turf;
+
+  const _EditTurfDialog({required this.turf});
+
+  @override
+  State<_EditTurfDialog> createState() => _EditTurfDialogState();
+}
+
+class _EditTurfDialogState extends State<_EditTurfDialog> {
+  late final TextEditingController _name;
+  late final TextEditingController _weekday;
+  late final TextEditingController _weekend;
+  late final TextEditingController _amenities;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.turf.name);
+    _weekday = TextEditingController(text: _priceNumber(widget.turf.pricePerHour));
+    _weekend = TextEditingController(text: _priceNumber(widget.turf.priceWeekend));
+    _amenities = TextEditingController(text: widget.turf.amenities.join(', '));
   }
 
-  String _priceNumber(String value) {
-    return value.replaceAll(RegExp(r'[^0-9.]'), '');
+  @override
+  void dispose() {
+    _name.dispose();
+    _weekday.dispose();
+    _weekend.dispose();
+    _amenities.dispose();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return ResponsiveAlertDialog(
+      title: const Text('Edit Turf'),
+      content: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          _dialogField('Name', _name),
+          _dialogField('Weekday Price', _weekday,
+              keyboardType: TextInputType.number),
+          _dialogField('Weekend Price', _weekend,
+              keyboardType: TextInputType.number),
+          _dialogField('Amenities', _amenities),
+        ]),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(
+            context,
+            UpdateTurfRequest(
+              name: _name.text.trim(),
+              pricePerHour: _weekday.text.trim(),
+              priceWeekend: _weekend.text.trim(),
+              amenities: _csv(_amenities.text),
+            ),
+          ),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _RemoveMediaDialog extends StatefulWidget {
+  const _RemoveMediaDialog();
+
+  @override
+  State<_RemoveMediaDialog> createState() => _RemoveMediaDialogState();
+}
+
+class _RemoveMediaDialogState extends State<_RemoveMediaDialog> {
+  final TextEditingController _url = TextEditingController();
+  String _type = 'photo';
+
+  @override
+  void dispose() {
+    _url.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ResponsiveAlertDialog(
+      title: const Text('Remove Media'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        DropdownButtonFormField<String>(
+          value: _type,
+          decoration: const InputDecoration(labelText: 'Type'),
+          items: const [
+            DropdownMenuItem(value: 'photo', child: Text('Photo')),
+            DropdownMenuItem(value: 'video', child: Text('Video')),
+          ],
+          onChanged: (value) {
+            if (value != null) setState(() => _type = value);
+          },
+        ),
+        const SizedBox(height: 12),
+        _dialogField('URL', _url, keyboardType: TextInputType.url),
+      ]),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(
+            context,
+            _MediaAction(action: 'remove', type: _type, url: _url.text),
+          ),
+          child: const Text('Remove'),
+        ),
+      ],
+    );
+  }
+}
+
+Widget _dialogField(
+  String label,
+  TextEditingController controller, {
+  TextInputType? keyboardType,
+}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(labelText: label),
+    ),
+  );
+}
+
+List<String> _csv(String value) {
+  return value
+      .split(',')
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toList();
+}
+
+String _priceNumber(String value) {
+  return value.replaceAll(RegExp(r'[^0-9.]'), '');
 }
 
 class _MediaAction {
