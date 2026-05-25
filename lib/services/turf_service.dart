@@ -25,6 +25,21 @@ class TurfService {
     await ApiClient.put(ApiConstants.turf(turfId), data: request.toJson());
   }
 
+  Future<TurfPricing> getPricing(int turfId) async {
+    final response = await ApiClient.get(ApiConstants.turfPricing(turfId));
+    return TurfPricing.fromJson(response.data);
+  }
+
+  Future<void> updatePricing(
+    int turfId,
+    UpdateTurfPricingRequest request,
+  ) async {
+    await ApiClient.put(
+      ApiConstants.turfPricing(turfId),
+      data: request.toJson(),
+    );
+  }
+
   Future<void> uploadMedia({
     required int turfId,
     List<String> photoPaths = const [],

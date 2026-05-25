@@ -48,12 +48,20 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     _matchController.load();
     final loadedTurfs = await _turfController.load();
     if (!mounted) return;
-    final availableTurfs = loadedTurfs
-        ? _turfController.turfs.where((turf) => turf.id != null)
-        : const Iterable<TurfItem>.empty();
-    final firstTurf = availableTurfs.isEmpty ? null : availableTurfs.first;
-    _selectedTurfId = firstTurf?.id ?? 1;
-    await _loadSlots();
+    if (loadedTurfs) _syncSelectedTurf();
+    await Future.wait([
+      _loadSlots(),
+      _loadPricing(),
+    ]);
+  }
+
+  void _syncSelectedTurf() {
+    final availableTurfs = _turfController.turfs.where((turf) => turf.id != null);
+    final hasSelected =
+        availableTurfs.any((turf) => turf.id == _selectedTurfId);
+    if (!hasSelected) {
+      _selectedTurfId = availableTurfs.isEmpty ? null : availableTurfs.first.id;
+    }
   }
 
   void _onMatchesChanged() {
@@ -70,20 +78,32 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
 
   Future<bool> _loadSlots() async {
     final turfId = _selectedTurfId;
-    if (turfId == null) return false;
+    if (turfId == null) {
+      _selectedSlotIds.clear();
+      _slotController.clear();
+      return false;
+    }
     _selectedSlotIds.clear();
     return _slotController.load(turfId: turfId, date: _apiDate(_selectedDate));
+  }
+
+  Future<bool> _loadPricing() async {
+    final turfId = _selectedTurfId;
+    if (turfId == null) {
+      _turfController.clearPricing();
+      return false;
+    }
+    return _turfController.loadPricing(turfId);
   }
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: () async {
-        await Future.wait([
-          _matchController.load(),
-          _turfController.load(),
-          _loadSlots(),
-        ]);
+        await Future.wait([_matchController.load(), _turfController.load()]);
+        if (!mounted) return;
+        setState(_syncSelectedTurf);
+        await Future.wait([_loadSlots(), _loadPricing()]);
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -102,36 +122,81 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
           const SizedBox(height: 18),
           _slotsCard(),
           _matchesCard(),
-          AppCard(
-            padding: const EdgeInsets.all(12),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Dynamic Pricing Rules',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 14),
-              _priceBox('Weekday', 'Rs 800'),
-              const SizedBox(height: 10),
-              _priceBox('Weekend', 'Rs 1,000'),
-              const SizedBox(height: 10),
-              _priceBox('Peak Hours', 'Rs 1,200'),
-              const SizedBox(height: 14),
-              const ToggleRow(
-                  label: 'Dynamic surge pricing',
-                  subtitle: 'Auto-increase price when more than 80% booked',
-                  value: true),
-              const Divider(color: AppColors.border),
-              const ToggleRow(
-                  label: 'Last-minute discount',
-                  subtitle: '20% off unsold slots 1h before start time',
-                  value: false),
-            ]),
-          ),
+          _pricingRulesCard(),
         ]),
       ),
     );
   }
 
+  Widget _pricingRulesCard() {
+    final pricing = _turfController.pricing;
+    final isBusy = _turfController.isPricingLoading || _turfController.isSaving;
+
+    return AppCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Expanded(
+            child: Text('Dynamic Pricing Rules',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          ),
+          if (isBusy)
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            SmallButton.ghost(
+              'Edit',
+              icon: Icons.edit_outlined,
+              onPressed: pricing == null ? null : _showPricingDialog,
+            ),
+        ]),
+        const SizedBox(height: 14),
+        if (_turfController.isPricingLoading && pricing == null)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (pricing == null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Text(
+              _selectedTurfId == null
+                  ? 'Create a turf first to configure pricing rules.'
+                  : 'Pricing rules not loaded.',
+              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
+          )
+        else ...[
+          _priceBox('Weekday', pricing.weekdayLabel),
+          const SizedBox(height: 10),
+          _priceBox('Weekend', pricing.weekendLabel),
+          const SizedBox(height: 10),
+          _priceBox('Peak Hours', pricing.peakHoursLabel),
+          const SizedBox(height: 14),
+          ToggleRow(
+            label: 'Dynamic surge pricing',
+            subtitle: pricing.surgeSubtitle,
+            value: pricing.surgePricingEnabled,
+            onChanged: isBusy ? null : _toggleSurgePricing,
+          ),
+          const Divider(color: AppColors.border),
+          ToggleRow(
+            label: 'Last-minute discount',
+            subtitle: pricing.lastMinuteSubtitle,
+            value: pricing.lastMinuteDiscountEnabled,
+            onChanged: isBusy ? null : _toggleLastMinuteDiscount,
+          ),
+        ],
+      ]),
+    );
+  }
+
   Widget _slotsCard() {
+    final hasTurf = _selectedTurfId != null;
+
     return AppCard(
       padding: const EdgeInsets.all(12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -167,13 +232,14 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
           SmallButton.ghost(
             _formatShortDate(_selectedDate),
             icon: Icons.calendar_month_outlined,
-            onPressed: _pickSlotDate,
+            onPressed: hasTurf ? _pickSlotDate : null,
           ),
           SmallButton.ghost(
             'Generate',
             icon: Icons.auto_awesome_outlined,
-            onPressed:
-                _slotController.isSaving ? null : _showGenerateSlotsDialog,
+            onPressed: hasTurf && !_slotController.isSaving
+                ? _showGenerateSlotsDialog
+                : null,
           ),
           SmallButton.red(
             'Block',
@@ -192,7 +258,15 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
           ),
         ]),
         const SizedBox(height: 8),
-        if (_slotController.isLoading && _slotController.slots.isEmpty)
+        if (!hasTurf)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Text(
+              'Create a turf first to generate and manage slots.',
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
+          )
+        else if (_slotController.isLoading && _slotController.slots.isEmpty)
           const Center(
             child: Padding(
               padding: EdgeInsets.all(18),
@@ -227,9 +301,9 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     final turfs = _turfController.turfs.where((turf) => turf.id != null);
     if (turfs.isEmpty) {
       return SmallButton.ghost(
-        _selectedTurfId == null ? 'Turf' : 'Turf #$_selectedTurfId',
+        'No Turf',
         icon: Icons.stadium_outlined,
-        onPressed: _showTurfIdDialog,
+        onPressed: null,
       );
     }
 
@@ -261,7 +335,10 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
           onChanged: (value) async {
             if (value == null) return;
             setState(() => _selectedTurfId = value);
-            await _loadSlots();
+            await Future.wait([
+              _loadSlots(),
+              _loadPricing(),
+            ]);
           },
         ),
       ),
@@ -287,34 +364,6 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     );
     if (picked == null) return;
     setState(() => _selectedDate = picked);
-    await _loadSlots();
-  }
-
-  Future<void> _showTurfIdDialog() async {
-    final turfId = TextEditingController(text: (_selectedTurfId ?? 1).toString());
-    final id = await showDialog<int>(
-      context: context,
-      builder: (context) {
-        return ResponsiveAlertDialog(
-          title: const Text('Turf ID'),
-          content: _dialogField('Turf ID', turfId,
-              keyboardType: TextInputType.number),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, int.tryParse(turfId.text)),
-              child: const Text('Load'),
-            ),
-          ],
-        );
-      },
-    );
-    disposeDialogControllers([turfId]);
-    if (id == null) return;
-    setState(() => _selectedTurfId = id);
     await _loadSlots();
   }
 
@@ -443,6 +492,111 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     if (!mounted) return;
     if (saved) _selectedSlotIds.clear();
     _showSlotActionResult(saved, 'Slot price updated.');
+  }
+
+  Future<void> _showPricingDialog() async {
+    final turfId = _selectedTurfId;
+    final pricing = _turfController.pricing;
+    if (turfId == null || pricing == null) return;
+
+    final weekday = TextEditingController(text: _numberText(pricing.weekday));
+    final weekend = TextEditingController(text: _numberText(pricing.weekend));
+    final peakHours =
+        TextEditingController(text: _numberText(pricing.peakHours));
+
+    final request = await showDialog<UpdateTurfPricingRequest>(
+      context: context,
+      builder: (context) {
+        return ResponsiveAlertDialog(
+          title: const Text('Edit Pricing Rules'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            _dialogField('Weekday Price', weekday,
+                keyboardType: TextInputType.number),
+            _dialogField('Weekend Price', weekend,
+                keyboardType: TextInputType.number),
+            _dialogField('Peak Hours Price', peakHours,
+                keyboardType: TextInputType.number),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(
+                context,
+                UpdateTurfPricingRequest(
+                  weekday: num.tryParse(weekday.text.trim()),
+                  weekend: num.tryParse(weekend.text.trim()),
+                  peakHours: num.tryParse(peakHours.text.trim()),
+                ),
+              ),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    disposeDialogControllers([weekday, weekend, peakHours]);
+    if (request == null) return;
+    final saved = await _turfController.updatePricing(turfId, request);
+    if (!mounted) return;
+    _showPricingActionResult(saved, 'Pricing rules updated.');
+  }
+
+  Future<void> _toggleSurgePricing(bool enabled) async {
+    final turfId = _selectedTurfId;
+    final pricing = _turfController.pricing;
+    if (turfId == null || pricing == null) return;
+
+    final saved = await _turfController.updatePricing(
+      turfId,
+      UpdateTurfPricingRequest(
+        surgePricingEnabled: enabled,
+        surgeThreshold: enabled ? pricing.surgeThreshold : null,
+        surgeMultiplier: enabled ? pricing.surgeMultiplier : null,
+      ),
+    );
+    if (!mounted) return;
+    _showPricingActionResult(
+      saved,
+      enabled ? 'Surge pricing enabled.' : 'Surge pricing disabled.',
+    );
+  }
+
+  Future<void> _toggleLastMinuteDiscount(bool enabled) async {
+    final turfId = _selectedTurfId;
+    final pricing = _turfController.pricing;
+    if (turfId == null || pricing == null) return;
+
+    final saved = await _turfController.updatePricing(
+      turfId,
+      UpdateTurfPricingRequest(
+        lastMinuteDiscountEnabled: enabled,
+        lastMinuteDiscountPercent:
+            enabled ? pricing.lastMinuteDiscountPercent : null,
+        lastMinuteHoursBefore: enabled ? pricing.lastMinuteHoursBefore : null,
+      ),
+    );
+    if (!mounted) return;
+    _showPricingActionResult(
+      saved,
+      enabled
+          ? 'Last-minute discount enabled.'
+          : 'Last-minute discount disabled.',
+    );
+  }
+
+  void _showPricingActionResult(bool success, String successMessage) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success
+            ? successMessage
+            : _turfController.errorMessage ?? 'Unable to save pricing rules.'),
+        backgroundColor: success ? AppColors.green : AppColors.red,
+      ),
+    );
   }
 
   void _showSlotActionResult(bool success, String successMessage) {
@@ -1325,6 +1479,10 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       'Dec',
     ];
     return '${value.day.toString().padLeft(2, '0')} ${months[value.month - 1]} ${value.year}';
+  }
+
+  String _numberText(num value) {
+    return value % 1 == 0 ? value.toInt().toString() : value.toString();
   }
 
   String _apiTimeFromText(String value) {

@@ -21,6 +21,14 @@ class SlotController extends SafeChangeNotifier {
   String? get errorMessage => _errorMessage;
   List<SlotItem> get slots => _slots;
 
+  void clear() {
+    _slots = const [];
+    _turfId = null;
+    _date = null;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Future<bool> load({required int turfId, required String date}) async {
     _isLoading = true;
     _errorMessage = null;
@@ -110,4 +118,5 @@ class SlotController extends SafeChangeNotifier {
       }
     }
   }
+
 }

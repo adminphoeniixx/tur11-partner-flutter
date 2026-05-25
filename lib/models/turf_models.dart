@@ -206,6 +206,133 @@ class UpdateTurfRequest {
   }
 }
 
+class TurfPricing {
+  final num weekday;
+  final num weekend;
+  final num peakHours;
+  final bool surgePricingEnabled;
+  final bool lastMinuteDiscountEnabled;
+  final num surgeThreshold;
+  final num surgeMultiplier;
+  final num lastMinuteDiscountPercent;
+  final num lastMinuteHoursBefore;
+  final Map<String, dynamic> data;
+
+  const TurfPricing({
+    required this.weekday,
+    required this.weekend,
+    required this.peakHours,
+    required this.surgePricingEnabled,
+    required this.lastMinuteDiscountEnabled,
+    required this.surgeThreshold,
+    required this.surgeMultiplier,
+    required this.lastMinuteDiscountPercent,
+    required this.lastMinuteHoursBefore,
+    this.data = const {},
+  });
+
+  factory TurfPricing.fromJson(Object? value) {
+    final root = _asMap(value);
+    final data = _asMap(root['data']);
+    final pricing = _asMap(root['pricing']);
+    final source = data.isNotEmpty
+        ? data
+        : pricing.isNotEmpty
+            ? pricing
+            : root;
+
+    return TurfPricing(
+      weekday: _numValue(source['weekday'], fallback: 0),
+      weekend: _numValue(source['weekend'], fallback: 0),
+      peakHours: _numValue(
+        source['peak_hours'] ?? source['peakHours'],
+        fallback: 0,
+      ),
+      surgePricingEnabled: _boolValue(
+        source['surge_pricing_enabled'] ?? source['surgePricingEnabled'],
+      ),
+      lastMinuteDiscountEnabled: _boolValue(
+        source['last_minute_discount_enabled'] ??
+            source['lastMinuteDiscountEnabled'],
+      ),
+      surgeThreshold: _numValue(
+        source['surge_threshold'] ?? source['surgeThreshold'],
+        fallback: 80,
+      ),
+      surgeMultiplier: _numValue(
+        source['surge_multiplier'] ?? source['surgeMultiplier'],
+        fallback: 1.2,
+      ),
+      lastMinuteDiscountPercent: _numValue(
+        source['last_minute_discount_percent'] ??
+            source['lastMinuteDiscountPercent'],
+        fallback: 20,
+      ),
+      lastMinuteHoursBefore: _numValue(
+        source['last_minute_hours_before'] ?? source['lastMinuteHoursBefore'],
+        fallback: 1,
+      ),
+      data: source,
+    );
+  }
+
+  String get weekdayLabel => _money(weekday);
+  String get weekendLabel => _money(weekend);
+  String get peakHoursLabel => _money(peakHours);
+
+  String get surgeSubtitle {
+    final percent = ((surgeMultiplier - 1) * 100).round();
+    return '+$percent% when more than ${_cleanNumber(surgeThreshold)}% booked';
+  }
+
+  String get lastMinuteSubtitle {
+    return '${_cleanNumber(lastMinuteDiscountPercent)}% off unsold slots '
+        '${_cleanNumber(lastMinuteHoursBefore)}h before start time';
+  }
+}
+
+class UpdateTurfPricingRequest {
+  final num? weekday;
+  final num? weekend;
+  final num? peakHours;
+  final bool? surgePricingEnabled;
+  final num? surgeThreshold;
+  final num? surgeMultiplier;
+  final bool? lastMinuteDiscountEnabled;
+  final num? lastMinuteDiscountPercent;
+  final num? lastMinuteHoursBefore;
+
+  const UpdateTurfPricingRequest({
+    this.weekday,
+    this.weekend,
+    this.peakHours,
+    this.surgePricingEnabled,
+    this.surgeThreshold,
+    this.surgeMultiplier,
+    this.lastMinuteDiscountEnabled,
+    this.lastMinuteDiscountPercent,
+    this.lastMinuteHoursBefore,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (weekday != null) 'weekday': weekday,
+      if (weekend != null) 'weekend': weekend,
+      if (peakHours != null) 'peak_hours': peakHours,
+      if (surgePricingEnabled != null)
+        'surge_pricing_enabled': surgePricingEnabled,
+      if (surgeThreshold != null) 'surge_threshold': surgeThreshold,
+      if (surgeMultiplier != null) 'surge_multiplier': surgeMultiplier,
+      if (lastMinuteDiscountEnabled != null)
+        'last_minute_discount_enabled': lastMinuteDiscountEnabled,
+      if (lastMinuteDiscountPercent != null)
+        'last_minute_discount_percent': lastMinuteDiscountPercent,
+      if (lastMinuteHoursBefore != null)
+        'last_minute_hours_before': lastMinuteHoursBefore,
+    };
+  }
+}
+
 Map<String, dynamic> _asMap(Object? value) {
   if (value is Map<String, dynamic>) return value;
   if (value is Map) return Map<String, dynamic>.from(value);
@@ -249,6 +376,15 @@ bool _boolValue(Object? value) {
   if (value is bool) return value;
   final text = value?.toString().toLowerCase();
   return text == '1' || text == 'true' || text == 'active';
+}
+
+num _numValue(Object? value, {required num fallback}) {
+  if (value is num) return value;
+  return num.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
+String _cleanNumber(num value) {
+  return value % 1 == 0 ? value.toInt().toString() : value.toString();
 }
 
 String _occupancy(Map<String, dynamic> json, Map<String, dynamic> stats) {

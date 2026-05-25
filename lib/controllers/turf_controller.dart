@@ -11,13 +11,22 @@ class TurfController extends SafeChangeNotifier {
 
   bool _isLoading = false;
   bool _isSaving = false;
+  bool _isPricingLoading = false;
   String? _errorMessage;
   List<TurfItem> _turfs = const [];
+  TurfPricing? _pricing;
 
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
+  bool get isPricingLoading => _isPricingLoading;
   String? get errorMessage => _errorMessage;
   List<TurfItem> get turfs => _turfs;
+  TurfPricing? get pricing => _pricing;
+
+  void clearPricing() {
+    _pricing = null;
+    notifyListeners();
+  }
 
   Future<bool> load() async {
     _isLoading = true;
@@ -49,6 +58,56 @@ class TurfController extends SafeChangeNotifier {
 
   Future<bool> update(int turfId, UpdateTurfRequest request) async {
     return _save(() => _turfService.updateTurf(turfId, request), reload: true);
+  }
+
+  Future<bool> loadPricing(int turfId) async {
+    _isPricingLoading = true;
+    _errorMessage = null;
+    _pricing = null;
+    notifyListeners();
+
+    try {
+      _pricing = await _turfService.getPricing(turfId);
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Unable to load pricing rules. Please try again.';
+      return false;
+    } finally {
+      if (!isDisposed) {
+        _isPricingLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<bool> updatePricing(
+    int turfId,
+    UpdateTurfPricingRequest request,
+  ) async {
+    _isSaving = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _turfService.updatePricing(turfId, request);
+      if (isDisposed) return false;
+      _pricing = await _turfService.getPricing(turfId);
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Unable to save pricing rules. Please try again.';
+      return false;
+    } finally {
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
+    }
   }
 
   Future<bool> uploadMedia({

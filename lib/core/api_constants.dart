@@ -17,6 +17,7 @@ class ApiConstants {
   static const reviews = '/reviews';
   static const turfs = '/turfs';
   static String turf(int turfId) => '$turfs/$turfId';
+  static String turfPricing(int turfId) => '${turf(turfId)}/pricing';
   static String turfUploadMedia(int turfId) => '$turfs/$turfId/upload-media';
   static String turfRemoveMedia(int turfId) => '$turfs/$turfId/remove-media';
   static String turfToggleStatus(int turfId) => '$turfs/$turfId/toggle-status';
