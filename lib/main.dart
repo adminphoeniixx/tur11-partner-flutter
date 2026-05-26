@@ -5,10 +5,15 @@ import 'firebase_options.dart';
 
 import 'theme/app_theme.dart';
 import 'controllers/auth_controller.dart';
+import 'models/app_config_models.dart';
 import 'models/auth_models.dart';
 import 'screens/auth_screens.dart';
 import 'screens/app_shell.dart';
+import 'screens/force_update_screen.dart';
+import 'screens/maintenance_screen.dart';
 import 'screens/splash_screen.dart';
+import 'services/app_config_service.dart';
+import 'widgets/optional_update_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +57,10 @@ class _Turf11RootState extends State<Turf11Root> {
   String _otpSource = 'login';
   String? _otpPhone;
   RegisterOwnerRequest? _pendingRegistration;
+  MaintenanceConfig? _maintenanceConfig;
+  UpdateConfig? _forceUpdateConfig;
+  UpdateConfig? _pendingOptionalUpdate;
+  bool _optionalUpdateShown = false;
 
   @override
   void dispose() {
@@ -61,6 +70,7 @@ class _Turf11RootState extends State<Turf11Root> {
 
   void _showAuth(String page) {
     setState(() => _authState = page);
+    _showOptionalUpdateIfNeeded();
   }
 
   void _showOtp(String phone, {RegisterOwnerRequest? registration}) {
@@ -85,6 +95,7 @@ class _Turf11RootState extends State<Turf11Root> {
       _otpSource = 'login';
       _authState = 'login';
     });
+    _showOptionalUpdateIfNeeded();
   }
 
   void _showRegister() {
@@ -102,6 +113,7 @@ class _Turf11RootState extends State<Turf11Root> {
       _otpSource = 'login';
       _authState = 'app';
     });
+    _showOptionalUpdateIfNeeded();
   }
 
   void _logout() {
@@ -117,10 +129,48 @@ class _Turf11RootState extends State<Turf11Root> {
   }
 
   Future<void> _completeSplash() async {
+    final config = await AppConfigService.checkAppConfig();
+    if (!mounted) return;
+
+    if (config?.maintenance?.isActive == true) {
+      setState(() {
+        _maintenanceConfig = config!.maintenance;
+        _authState = 'maintenance';
+      });
+      return;
+    }
+
+    if (config?.update?.isForce == true) {
+      setState(() {
+        _forceUpdateConfig = config!.update;
+        _pendingOptionalUpdate = null;
+        _authState = 'forceUpdate';
+      });
+      return;
+    }
+
+    if (config?.update?.isAvailable == true && !_optionalUpdateShown) {
+      _pendingOptionalUpdate = config!.update;
+    }
+
     final restored = await _authController.restoreSession();
     if (!mounted) return;
 
     _showAuth(restored && _authController.isAuthenticated ? 'app' : 'login');
+  }
+
+  void _showOptionalUpdateIfNeeded() {
+    final update = _pendingOptionalUpdate;
+    if (update == null || _optionalUpdateShown) return;
+    if (_authState != 'login' && _authState != 'app') return;
+
+    _optionalUpdateShown = true;
+    _pendingOptionalUpdate = null;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showOptionalUpdateDialog(context, update);
+    });
   }
 
   @override
@@ -128,6 +178,37 @@ class _Turf11RootState extends State<Turf11Root> {
     switch (_authState) {
       case 'splash':
         return SplashScreen(onDone: _completeSplash);
+      case 'maintenance':
+        return MaintenanceScreen(
+          maintenance: _maintenanceConfig ??
+              const MaintenanceConfig(
+                isActive: true,
+                title: 'Under Maintenance',
+                message:
+                    'We are improving Turf11 Partner. Please try again soon.',
+                imageUrl: null,
+                estimatedEnd: null,
+              ),
+          onResolved: _completeSplash,
+        );
+      case 'forceUpdate':
+        return ForceUpdateScreen(
+          update: _forceUpdateConfig ??
+              const UpdateConfig(
+                isAvailable: true,
+                isForce: true,
+                latestVersion: '',
+                minVersion: '',
+                title: 'Update Required',
+                message: 'Please update Turf11 Partner to continue.',
+                imageUrl: null,
+                playstoreUrl: null,
+                appstoreUrl: null,
+                downloadUrl: null,
+                updateMode: 'playstore',
+                whatsNew: [],
+              ),
+        );
       case 'login':
         return LoginScreen(
           authController: _authController,
