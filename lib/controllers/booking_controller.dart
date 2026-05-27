@@ -10,11 +10,13 @@ class BookingController extends SafeChangeNotifier {
       : _bookingService = bookingService ?? BookingService();
 
   bool _isLoading = false;
+  bool _isSaving = false;
   String? _errorMessage;
   List<BookingItem> _bookings = const [];
   BookingStats _stats = const BookingStats();
 
   bool get isLoading => _isLoading;
+  bool get isSaving => _isSaving;
   String? get errorMessage => _errorMessage;
   List<BookingItem> get bookings => _bookings;
   BookingStats get stats => _stats;
@@ -42,6 +44,33 @@ class BookingController extends SafeChangeNotifier {
     } finally {
       if (!isDisposed) {
         _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<bool> createOwnerBooking(CreateOwnerBookingRequest request) async {
+    _isSaving = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _bookingService.createOwnerBooking(request);
+      if (isDisposed) return false;
+      final response = await _bookingService.getBookings();
+      if (isDisposed) return false;
+      _bookings = response.bookings;
+      _stats = response.stats;
+      return true;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } catch (_) {
+      _errorMessage = 'Unable to create booking. Please try again.';
+      return false;
+    } finally {
+      if (!isDisposed) {
+        _isSaving = false;
         notifyListeners();
       }
     }

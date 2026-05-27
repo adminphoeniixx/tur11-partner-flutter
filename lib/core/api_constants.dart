@@ -54,8 +54,4 @@ class ApiConstants {
   static const verification = '/verification';
   static const verificationUpload = '/verification/upload';
   static const acceptTerms = '/accept-terms';
-  static const notifications = '/notifications';
-  static String notificationRead(int notificationId) =>
-      '$notifications/$notificationId/read';
-  static const notificationPrefs = '/notification-prefs';
 }

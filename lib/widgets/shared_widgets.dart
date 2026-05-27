@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 
 void disposeDialogControllers(List<TextEditingController> controllers) {
@@ -742,13 +743,19 @@ class PrefixInput extends StatelessWidget {
   final String hint;
   final TextInputType? keyboardType;
   final TextEditingController? controller;
+  final List<TextInputFormatter>? inputFormatters;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   const PrefixInput(
       {super.key,
       required this.prefix,
       required this.hint,
       this.keyboardType,
-      this.controller});
+      this.controller,
+      this.inputFormatters,
+      this.errorText,
+      this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -780,8 +787,11 @@ class PrefixInput extends StatelessWidget {
             child: TextField(
               controller: controller,
               keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
+              onChanged: onChanged,
               decoration: InputDecoration(
                 hintText: hint,
+                errorText: errorText,
                 border: InputBorder.none,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

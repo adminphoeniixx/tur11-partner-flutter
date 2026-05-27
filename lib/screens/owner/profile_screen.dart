@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-import '../../controllers/notification_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../models/profile_models.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/input_validators.dart';
 import '../../widgets/shared_widgets.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -17,8 +18,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late final ProfileController _controller;
-  final NotificationController _notificationController =
-      NotificationController();
   late final bool _ownsController;
 
   @override
@@ -27,21 +26,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _ownsController = widget.controller == null;
     _controller = widget.controller ?? ProfileController();
     _controller.addListener(_onProfileChanged);
-    _notificationController.addListener(_onProfileChanged);
     if (_controller.profile == null && !_controller.isLoading) {
       _controller.loadProfile();
     }
-    _notificationController.loadPreferences();
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onProfileChanged);
-    _notificationController.removeListener(_onProfileChanged);
     if (_ownsController) {
       _controller.dispose();
     }
-    _notificationController.dispose();
     super.dispose();
   }
 
@@ -55,10 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        await Future.wait([
-          _controller.loadProfile(),
-          _notificationController.loadPreferences(),
-        ]);
+        await _controller.loadProfile();
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -139,7 +131,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _infoRow(Icons.business, _value(profile.businessName)),
         ]),
       ),
-      _notificationPreferencesCard(),
       AppCard(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -202,11 +193,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _header(OwnerProfile? profile) {
-    final title = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Business Profile',
+    const title = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+       Text('Business Profile',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 3),
-      const Text('Manage your owner account details',
+       SizedBox(height: 3),
+       Text('Manage your owner account details',
           style: TextStyle(fontSize: 12, color: AppColors.muted)),
     ]);
 
@@ -257,107 +248,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _notificationPreferencesCard() {
-    final prefs = _notificationController.preferences;
-    final isBusy =
-        _notificationController.isLoading || _notificationController.isSaving;
-
-    return AppCard(
-      padding: const EdgeInsets.all(12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Expanded(
-            child: Text('Notification Preferences',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-          ),
-          if (isBusy)
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-        ]),
-        if (_notificationController.errorMessage != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _notificationController.errorMessage!,
-            style: const TextStyle(color: AppColors.red, fontSize: 12),
-          ),
-        ],
-        const SizedBox(height: 12),
-        ToggleRow(
-          label: 'New booking alerts',
-          value: prefs.newBooking,
-          onChanged:
-              isBusy ? null : (value) => _updatePref(newBooking: value),
-        ),
-        const Divider(color: AppColors.border),
-        ToggleRow(
-          label: 'Payment received',
-          value: prefs.paymentReceived,
-          onChanged:
-              isBusy ? null : (value) => _updatePref(paymentReceived: value),
-        ),
-        const Divider(color: AppColors.border),
-        ToggleRow(
-          label: 'Cancellation alerts',
-          value: prefs.cancellation,
-          onChanged:
-              isBusy ? null : (value) => _updatePref(cancellation: value),
-        ),
-        const Divider(color: AppColors.border),
-        ToggleRow(
-          label: 'New reviews',
-          value: prefs.newReview,
-          onChanged: isBusy ? null : (value) => _updatePref(newReview: value),
-        ),
-      ]),
-    );
-  }
-
-  Future<void> _updatePref({
-    bool? newBooking,
-    bool? paymentReceived,
-    bool? cancellation,
-    bool? newReview,
-  }) async {
-    final saved = await _notificationController.updatePreference(
-      newBooking: newBooking,
-      paymentReceived: paymentReceived,
-      cancellation: cancellation,
-      newReview: newReview,
-    );
-    if (!mounted || saved) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _notificationController.errorMessage ??
-              'Unable to update notification preferences.',
-        ),
-        backgroundColor: AppColors.red,
-      ),
-    );
-  }
-
   Future<void> _showEditProfileDialog(OwnerProfile profile) async {
     final name = TextEditingController(text: profile.displayName);
     final businessName =
         TextEditingController(text: profile.businessName ?? '');
     final email = TextEditingController(text: profile.email ?? '');
     final city = TextEditingController(text: profile.city ?? '');
+    final formKey = GlobalKey<FormState>();
 
     final request = await showDialog<UpdateProfileRequest>(
       context: context,
       builder: (context) {
         return ResponsiveAlertDialog(
           title: const Text('Edit Profile'),
-          content: SingleChildScrollView(
+          content: Form(
+            key: formKey,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              _dialogField('Name', name),
-              _dialogField('Business Name', businessName),
-              _dialogField('Email', email,
-                  keyboardType: TextInputType.emailAddress),
-              _dialogField('City', city),
+              _dialogField(
+                'Name',
+                name,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'Name'),
+              ),
+              _dialogField(
+                'Business Name',
+                businessName,
+                validator: (value) => InputValidators.requiredField(
+                  value,
+                  label: 'Business name',
+                ),
+              ),
+              _dialogField(
+                'Email',
+                email,
+                keyboardType: TextInputType.emailAddress,
+                validator: InputValidators.email,
+              ),
+              _dialogField(
+                'City',
+                city,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'City'),
+              ),
             ]),
           ),
           actions: [
@@ -366,15 +298,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(
-                context,
-                UpdateProfileRequest(
-                  name: name.text,
-                  businessName: businessName.text,
-                  email: email.text,
-                  city: city.text,
-                ),
-              ),
+              onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                Navigator.pop(
+                  context,
+                  UpdateProfileRequest(
+                    name: name.text,
+                    businessName: businessName.text,
+                    email: email.text,
+                    city: city.text,
+                  ),
+                );
+              },
               child: const Text('Save'),
             ),
           ],
@@ -398,20 +333,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final upiId = TextEditingController(text: bank?.upiId ?? '');
     final accountHolder =
         TextEditingController(text: bank?.accountHolder ?? '');
+    final formKey = GlobalKey<FormState>();
 
     final request = await showDialog<UpdateBankDetailsRequest>(
       context: context,
       builder: (context) {
         return ResponsiveAlertDialog(
           title: const Text('Bank Details'),
-          content: SingleChildScrollView(
+          content: Form(
+            key: formKey,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              _dialogField('Account Number', accountNumber,
-                  keyboardType: TextInputType.number),
-              _dialogField('Bank Name', bankName),
-              _dialogField('IFSC', ifsc),
-              _dialogField('UPI ID', upiId),
-              _dialogField('Account Holder', accountHolder),
+              _dialogField(
+                'Account Number',
+                accountNumber,
+                keyboardType: TextInputType.number,
+                validator: (value) => InputValidators.requiredField(
+                  value,
+                  label: 'Account number',
+                ),
+              ),
+              _dialogField(
+                'Bank Name',
+                bankName,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'Bank name'),
+              ),
+              _dialogField(
+                'IFSC',
+                ifsc,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'IFSC'),
+              ),
+              _dialogField(
+                'UPI ID',
+                upiId,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'UPI ID'),
+              ),
+              _dialogField(
+                'Account Holder',
+                accountHolder,
+                validator: (value) => InputValidators.requiredField(
+                  value,
+                  label: 'Account holder',
+                ),
+              ),
             ]),
           ),
           actions: [
@@ -420,16 +386,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(
-                context,
-                UpdateBankDetailsRequest(
-                  accountNumber: accountNumber.text,
-                  bankName: bankName.text,
-                  ifsc: ifsc.text,
-                  upiId: upiId.text,
-                  accountHolder: accountHolder.text,
-                ),
-              ),
+              onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                Navigator.pop(
+                  context,
+                  UpdateBankDetailsRequest(
+                    accountNumber: accountNumber.text,
+                    bankName: bankName.text,
+                    ifsc: ifsc.text,
+                    upiId: upiId.text,
+                    accountHolder: accountHolder.text,
+                  ),
+                );
+              },
               child: const Text('Save'),
             ),
           ],
@@ -455,12 +424,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String label,
     TextEditingController controller, {
     TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
+        validator: validator,
+        inputFormatters: keyboardType == TextInputType.phone
+            ? [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ]
+            : null,
         decoration: InputDecoration(labelText: label),
       ),
     );

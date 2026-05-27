@@ -17,6 +17,7 @@ class AddTournamentScreen extends StatefulWidget {
 class _AddTournamentScreenState extends State<AddTournamentScreen> {
   final TournamentController _controller = TournamentController();
   final TurfController _turfController = TurfController();
+  final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _city = TextEditingController(text: 'Gurugram');
   final _startDate = TextEditingController(text: '01 Jun 2026');
@@ -78,7 +79,9 @@ class _AddTournamentScreenState extends State<AddTournamentScreen> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 78),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Form(
+        key: _formKey,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Add Tournament',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 3),
@@ -116,6 +119,7 @@ class _AddTournamentScreenState extends State<AddTournamentScreen> {
             TextFormField(
               controller: _description,
               maxLines: 4,
+              validator: _required,
               decoration: const InputDecoration(
                   hintText:
                       'Describe format, rules overview and special features.'),
@@ -135,11 +139,13 @@ class _AddTournamentScreenState extends State<AddTournamentScreen> {
             bgColor: AppColors.green,
             compact: true,
             onPressed: _controller.isSaving ? null : _submit),
-      ]),
+        ]),
+      ),
     );
   }
 
   Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
     final turfId = _turfId;
     final fallbackTurfId = int.tryParse(_manualTurfId.text);
     if (turfId == null && fallbackTurfId == null) {
@@ -220,6 +226,7 @@ class _AddTournamentScreenState extends State<AddTournamentScreen> {
       TextFormField(
         controller: controller,
         keyboardType: keyboardType,
+        validator: _required,
         decoration: InputDecoration(hintText: hint),
       ),
     ]);
@@ -232,6 +239,7 @@ class _AddTournamentScreenState extends State<AddTournamentScreen> {
         controller: controller,
         readOnly: true,
         keyboardType: TextInputType.datetime,
+        validator: _required,
         decoration: const InputDecoration(
           hintText: 'DD MMM YYYY',
           suffixIcon: Icon(Icons.calendar_month_outlined),
@@ -256,11 +264,14 @@ class _AddTournamentScreenState extends State<AddTournamentScreen> {
   Widget _price(String label, TextEditingController controller, String hint) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       FieldLabel(label),
-      PrefixInput(
-        prefix: 'Rs',
-        hint: hint,
+      TextFormField(
         keyboardType: TextInputType.number,
         controller: controller,
+        validator: _required,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixText: 'Rs ',
+        ),
       ),
     ]);
   }
@@ -276,6 +287,7 @@ class _AddTournamentScreenState extends State<AddTournamentScreen> {
       DropdownButtonFormField<String>(
         decoration: const InputDecoration(),
         value: value,
+        validator: (value) => value == null ? 'Required' : null,
         items: items
             .map((e) => DropdownMenuItem(value: e, child: Text(_label(e))))
             .toList(),
@@ -298,6 +310,7 @@ class _AddTournamentScreenState extends State<AddTournamentScreen> {
       DropdownButtonFormField<int>(
         decoration: const InputDecoration(),
         value: turfs.any((turf) => turf.id == _turfId) ? _turfId : null,
+        validator: (value) => value == null ? 'Required' : null,
         items: turfs
             .map((turf) =>
                 DropdownMenuItem(value: turf.id, child: Text(turf.name)))
@@ -371,5 +384,10 @@ class _AddTournamentScreenState extends State<AddTournamentScreen> {
       'Dec',
     ];
     return '${value.day.toString().padLeft(2, '0')} ${months[value.month - 1]} ${value.year}';
+  }
+
+  String? _required(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Required';
+    return null;
   }
 }

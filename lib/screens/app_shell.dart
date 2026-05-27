@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import '../controllers/notification_controller.dart';
 import '../controllers/profile_controller.dart';
 import '../models/profile_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'dashboard_screen.dart';
-import 'notifications_screen.dart';
 import 'app_screens.dart';
 
 class AppShell extends StatefulWidget {
@@ -20,28 +18,21 @@ class _AppShellState extends State<AppShell> {
   String _currentScreen = 'dashboard';
   final List<String> _history = [];
   final ProfileController _profileController = ProfileController();
-  final NotificationController _notificationController =
-      NotificationController();
 
   bool get _canGoBack => _history.isNotEmpty;
   OwnerProfile? get _profile => _profileController.profile;
-  bool get _hasUnreadNotifications => _notificationController.unreadCount > 0;
 
   @override
   void initState() {
     super.initState();
     _profileController.addListener(_onProfileChanged);
-    _notificationController.addListener(_onProfileChanged);
     _profileController.loadProfile();
-    _notificationController.load();
   }
 
   @override
   void dispose() {
     _profileController.removeListener(_onProfileChanged);
-    _notificationController.removeListener(_onProfileChanged);
     _profileController.dispose();
-    _notificationController.dispose();
     super.dispose();
   }
 
@@ -122,8 +113,6 @@ class _AppShellState extends State<AppShell> {
     switch (_currentScreen) {
       case 'dashboard':
         return DashboardScreen(onNavigate: _navigate, profile: _profile);
-      case 'notifications':
-        return NotificationsScreen(controller: _notificationController);
       case 'my_turfs':
         return MyTurfsScreen(onNavigate: _navigate);
       case 'add_turf':
@@ -210,47 +199,6 @@ class _AppShellState extends State<AppShell> {
             Expanded(
               child: const Turf11PartnerLogo(markSize: 30, textSize: 16),
             ),
-            GestureDetector(
-              onTap: () => _navigate('notifications'),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.bg2,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Stack(
-                  children: [
-                    const Center(
-                      child: Icon(
-                        Icons.notifications_outlined,
-                        size: 15,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                    if (_hasUnreadNotifications)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: AppColors.red,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.white,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
             GestureDetector(
               onTap: () => _navigate('profile'),
               child: AppAvatar(

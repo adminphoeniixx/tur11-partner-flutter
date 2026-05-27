@@ -123,6 +123,48 @@ class BookingsResponse {
   }
 }
 
+class CreateOwnerBookingRequest {
+  final int turfId;
+  final List<int> slotIds;
+  final String? ownerName;
+  final String customerName;
+  final String customerPhone;
+  final int playersCount;
+  final String sportType;
+  final String paymentMode;
+  final num amountCollected;
+  final String notes;
+
+  const CreateOwnerBookingRequest({
+    required this.turfId,
+    required this.slotIds,
+    this.ownerName,
+    required this.customerName,
+    required this.customerPhone,
+    required this.playersCount,
+    required this.sportType,
+    required this.paymentMode,
+    required this.amountCollected,
+    required this.notes,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'turf_id': turfId,
+      'slot_ids': slotIds,
+      if (ownerName != null && ownerName!.trim().isNotEmpty)
+        'owner_name': ownerName!.trim(),
+      'customer_name': customerName.trim(),
+      'customer_phone': customerPhone.trim(),
+      'players_count': playersCount,
+      'sport_type': sportType.trim(),
+      'payment_mode': paymentMode.trim(),
+      'amount_collected': amountCollected,
+      'notes': notes.trim(),
+    };
+  }
+}
+
 class CancellationItem {
   final String id;
   final String customerName;

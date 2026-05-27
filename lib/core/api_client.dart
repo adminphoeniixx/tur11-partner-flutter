@@ -270,7 +270,12 @@ class ApiClient {
 
       final message = data['message'] ?? data['error'] ?? data['detail'];
       if (message != null && message.toString().trim().isNotEmpty) {
-        return message.toString();
+        final text = message.toString();
+        if (text.contains('null value in column "owner_name"') &&
+            text.contains('insert into "bookings"')) {
+          return 'Booking could not be created because the server is not saving owner_name. Please update the bookings API.';
+        }
+        return text;
       }
     }
 

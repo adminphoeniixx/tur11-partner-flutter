@@ -178,6 +178,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _recentBookings(DashboardData dashboard) {
+    final visibleBookings = dashboard.recentBookings.take(2).toList();
+
     return SizedBox(
       width: double.infinity,
       child: AppCard(
@@ -213,7 +215,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             )
           else
-            ...dashboard.recentBookings.map(_bookingFromApi),
+            ...visibleBookings.map(_bookingFromApi),
         ]),
       ),
     );

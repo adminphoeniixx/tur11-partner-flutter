@@ -365,11 +365,14 @@ class _AddTurfScreenState extends State<AddTurfScreen> {
   Widget _price(String label, String hint, TextEditingController controller) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       FieldLabel(label),
-      PrefixInput(
-        prefix: 'Rs',
-        hint: hint,
+      TextFormField(
         controller: controller,
         keyboardType: TextInputType.number,
+        validator: _required,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixText: 'Rs ',
+        ),
       ),
     ]);
   }

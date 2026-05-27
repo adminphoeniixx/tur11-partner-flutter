@@ -24,13 +24,14 @@ class MatchService {
     );
   }
 
-  Future<Object?> getStream(int matchId) async {
+  Future<LiveStreamInfo> getStream(int matchId) async {
     final response = await ApiClient.get(ApiConstants.matchStream(matchId));
-    return response.data;
+    return LiveStreamInfo.fromJson(response.data);
   }
 
-  Future<void> createMuxStream(int matchId) async {
-    await ApiClient.post(ApiConstants.matchMuxStream(matchId));
+  Future<LiveStreamInfo> createMuxStream(int matchId) async {
+    final response = await ApiClient.post(ApiConstants.matchMuxStream(matchId));
+    return LiveStreamInfo.fromJson(response.data);
   }
 
   Future<void> endStream(int matchId) async {

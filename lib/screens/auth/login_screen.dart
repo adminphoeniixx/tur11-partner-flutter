@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/input_validators.dart';
 import '../../widgets/shared_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
+  String? _phoneError;
 
   @override
   void initState() {
@@ -43,10 +46,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _sendOtp() async {
     final phone = _phoneController.text.trim();
-    if (phone.length < 10) {
-      _showMessage('Enter a valid mobile number.');
+    final phoneError = InputValidators.phone(phone);
+    if (phoneError != null) {
+      setState(() => _phoneError = phoneError);
       return;
     }
+    setState(() => _phoneError = null);
 
     final success = await widget.authController.sendOtp(
       phone: phone,
@@ -105,6 +110,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 hint: 'Enter mobile number',
                 keyboardType: TextInputType.phone,
                 controller: _phoneController,
+                errorText: _phoneError,
+                onChanged: (_) {
+                  if (_phoneError != null) setState(() => _phoneError = null);
+                },
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
               ),
               const SizedBox(height: 16),
               PrimaryButton(

@@ -1,3 +1,120 @@
+class LiveStreamInfo {
+  final String streamUrl;
+  final String streamType;
+  final String playbackUrl;
+  final String playbackId;
+  final String streamKey;
+  final String rtmpUrl;
+  final String status;
+  final Map<String, dynamic> data;
+
+  const LiveStreamInfo({
+    this.streamUrl = '',
+    this.streamType = '',
+    this.playbackUrl = '',
+    this.playbackId = '',
+    this.streamKey = '',
+    this.rtmpUrl = '',
+    this.status = '',
+    this.data = const {},
+  });
+
+  bool get hasContent {
+    return streamUrl.isNotEmpty ||
+        playbackUrl.isNotEmpty ||
+        playbackId.isNotEmpty ||
+        streamKey.isNotEmpty ||
+        rtmpUrl.isNotEmpty ||
+        status.isNotEmpty;
+  }
+
+  String get watchUrl {
+    if (playbackUrl.isNotEmpty) return playbackUrl;
+    if (streamUrl.isNotEmpty) return streamUrl;
+    if (playbackId.isNotEmpty) return 'https://stream.mux.com/$playbackId.m3u8';
+    return '';
+  }
+
+  factory LiveStreamInfo.fromJson(Object? value) {
+    final root = _asMap(value);
+    final data = _asMap(root['data']);
+    final stream = _firstMap([
+      data['stream'],
+      data['live_stream'],
+      data['liveStream'],
+      data['mux'],
+      root['stream'],
+      root['live_stream'],
+      root['liveStream'],
+      root['mux'],
+      data,
+      root,
+    ]);
+
+    final playbackId = _firstString([
+      stream['playback_id'],
+      stream['playbackId'],
+      _playbackIdFromList(stream['playback_ids'] ?? stream['playbackIds']),
+      data['playback_id'],
+      data['playbackId'],
+      root['playback_id'],
+      root['playbackId'],
+    ]);
+
+    final playbackUrl = _firstString([
+      stream['playback_url'],
+      stream['playbackUrl'],
+      stream['hls_url'],
+      stream['hlsUrl'],
+      data['playback_url'],
+      data['hls_url'],
+      root['playback_url'],
+      root['hls_url'],
+      if (playbackId.isNotEmpty) 'https://stream.mux.com/$playbackId.m3u8',
+    ]);
+
+    return LiveStreamInfo(
+      streamUrl: _firstString([
+        stream['stream_url'],
+        stream['streamUrl'],
+        stream['url'],
+        data['stream_url'],
+        root['stream_url'],
+      ]),
+      streamType: _firstString([
+        stream['stream_type'],
+        stream['streamType'],
+        stream['type'],
+        data['stream_type'],
+        root['stream_type'],
+      ]),
+      playbackUrl: playbackUrl,
+      playbackId: playbackId,
+      streamKey: _firstString([
+        stream['stream_key'],
+        stream['streamKey'],
+        data['stream_key'],
+        root['stream_key'],
+      ]),
+      rtmpUrl: _firstString([
+        stream['rtmp_url'],
+        stream['rtmpUrl'],
+        stream['server_url'],
+        stream['serverUrl'],
+        data['rtmp_url'],
+        root['rtmp_url'],
+      ]),
+      status: _firstString([
+        stream['status'],
+        stream['state'],
+        data['status'],
+        root['status'],
+      ]),
+      data: root.isEmpty ? {'data': value} : root,
+    );
+  }
+}
+
 class MatchItem {
   final int? id;
   final String title;
@@ -235,6 +352,31 @@ Map<String, dynamic> _asMap(Object? value) {
 List<dynamic> _asList(Object? value) {
   if (value is List) return value;
   return const [];
+}
+
+Map<String, dynamic> _firstMap(List<Object?> values) {
+  for (final value in values) {
+    final mapped = _asMap(value);
+    if (mapped.isNotEmpty) return mapped;
+  }
+  return {};
+}
+
+String _firstString(List<Object?> values) {
+  for (final value in values) {
+    final text = value?.toString().trim();
+    if (text != null && text.isNotEmpty && text != 'null') return text;
+  }
+  return '';
+}
+
+String _playbackIdFromList(Object? value) {
+  for (final item in _asList(value)) {
+    final mapped = _asMap(item);
+    final id = _firstString([mapped['id'], mapped['playback_id']]);
+    if (id.isNotEmpty) return id;
+  }
+  return '';
 }
 
 List<dynamic> _firstList(List<Object?> values) {

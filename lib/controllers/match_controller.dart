@@ -74,7 +74,7 @@ class MatchController extends SafeChangeNotifier {
     );
   }
 
-  Future<Object?> getStreamInfo(int matchId) async {
+  Future<LiveStreamInfo?> getStreamInfo(int matchId) async {
     _isSaving = true;
     _errorMessage = null;
     notifyListeners();
@@ -97,11 +97,27 @@ class MatchController extends SafeChangeNotifier {
     }
   }
 
-  Future<bool> createMuxStream(int matchId) {
-    return _saveAction(
-      () => _matchService.createMuxStream(matchId),
-      fallback: 'Unable to create Mux stream. Please try again.',
-    );
+  Future<LiveStreamInfo?> createMuxStream(int matchId) async {
+    _isSaving = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final stream = await _matchService.createMuxStream(matchId);
+      if (isDisposed) return null;
+      return stream;
+    } on ApiException catch (error) {
+      _errorMessage = error.message;
+      return null;
+    } catch (_) {
+      _errorMessage = 'Unable to create Mux stream. Please try again.';
+      return null;
+    } finally {
+      if (!isDisposed) {
+        _isSaving = false;
+        notifyListeners();
+      }
+    }
   }
 
   Future<bool> endStream(int matchId) {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../controllers/match_controller.dart';
 import '../../controllers/slot_controller.dart';
@@ -740,6 +742,7 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
                   decoration: const InputDecoration(labelText: 'Stream Type'),
                   items: const [
                     DropdownMenuItem(value: 'youtube', child: Text('YouTube')),
+                    DropdownMenuItem(value: 'mux', child: Text('Mux')),
                     DropdownMenuItem(value: 'custom', child: Text('Custom')),
                   ],
                   onChanged: (value) {
@@ -802,18 +805,55 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
       return;
     }
 
+    await _showStreamInfoDialog(info);
+  }
+
+  Future<void> _createMuxStream(BuildContext dialogContext, int matchId) async {
+    Navigator.pop(dialogContext);
+    final info = await _matchController.createMuxStream(matchId);
+    if (!mounted) return;
+    if (info == null) {
+      _showMatchActionResult(false, '');
+      return;
+    }
+    _showMatchActionResult(true, 'Mux stream created.');
+    await _showStreamInfoDialog(info);
+  }
+
+  Future<void> _showStreamInfoDialog(LiveStreamInfo info) async {
+    final rows = <Widget>[
+      if (info.status.isNotEmpty) _streamInfoRow('Status', info.status),
+      if (info.streamType.isNotEmpty) _streamInfoRow('Type', info.streamType),
+      if (info.rtmpUrl.isNotEmpty) _streamInfoRow('RTMP URL', info.rtmpUrl),
+      if (info.streamKey.isNotEmpty) _streamInfoRow('Stream Key', info.streamKey),
+      if (info.playbackId.isNotEmpty)
+        _streamInfoRow('Playback ID', info.playbackId),
+      if (info.watchUrl.isNotEmpty) _streamInfoRow('Watch URL', info.watchUrl),
+      if (!info.hasContent)
+        Text(
+          info.data.toString(),
+          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+        ),
+    ];
+
     await showDialog<void>(
       context: context,
       builder: (context) {
         return ResponsiveAlertDialog(
           title: const Text('Stream Info'),
           content: SingleChildScrollView(
-            child: Text(
-              info.toString(),
-              style: const TextStyle(fontSize: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: rows,
             ),
           ),
           actions: [
+            if (info.watchUrl.isNotEmpty)
+              TextButton(
+                onPressed: () => _openStreamUrl(info.watchUrl),
+                child: const Text('Open'),
+              ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Close'),
@@ -824,11 +864,55 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     );
   }
 
-  Future<void> _createMuxStream(BuildContext dialogContext, int matchId) async {
-    Navigator.pop(dialogContext);
-    final saved = await _matchController.createMuxStream(matchId);
+  Widget _streamInfoRow(String label, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.bg2,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.muted,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ]),
+        ),
+        IconButton(
+          tooltip: 'Copy',
+          onPressed: () => _copyStreamValue(value),
+          icon: const Icon(Icons.copy, size: 18),
+        ),
+      ]),
+    );
+  }
+
+  Future<void> _copyStreamValue(String value) async {
+    await Clipboard.setData(ClipboardData(text: value));
     if (!mounted) return;
-    _showMatchActionResult(saved, 'Mux stream created.');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Copied.')),
+    );
+  }
+
+  Future<void> _openStreamUrl(String value) async {
+    final uri = Uri.tryParse(value);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _endStream(BuildContext dialogContext, int matchId) async {

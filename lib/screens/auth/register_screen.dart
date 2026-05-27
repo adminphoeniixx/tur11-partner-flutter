@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../controllers/auth_controller.dart';
 import '../../models/auth_models.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/input_validators.dart';
 import '../../widgets/shared_widgets.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _businessNameController = TextEditingController();
@@ -32,6 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _sportsController =
       TextEditingController(text: 'Cricket');
   final TextEditingController _gstController = TextEditingController();
+  String? _phoneError;
 
   @override
   void initState() {
@@ -91,18 +95,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       gstNumber: _gstController.text.trim(),
     );
 
-    if (request.firstName.isEmpty ||
-        request.lastName.isEmpty ||
-        request.businessName.isEmpty ||
-        request.phone.length < 10 ||
-        request.email.isEmpty ||
-        request.city.isEmpty) {
-      _showMessage('Please fill all required fields.');
-      return;
-    }
-
-    if (!_isValidEmail(request.email)) {
-      _showMessage('Enter a valid email address.');
+    final phoneError = InputValidators.phone(request.phone);
+    setState(() => _phoneError = phoneError);
+    if (!_formKey.currentState!.validate() || phoneError != null) {
       return;
     }
 
@@ -124,10 +119,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
-  }
-
   @override
   Widget build(BuildContext context) {
     final isLoading = widget.authController.isLoading;
@@ -137,7 +128,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-          child: Column(
+          child: Form(
+            key: _formKey,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Align(
@@ -164,18 +157,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const FieldLabel('First Name'),
               TextFormField(
                 controller: _firstNameController,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'First name'),
                 decoration: const InputDecoration(hintText: 'Vikram'),
               ),
               const SizedBox(height: 16),
               const FieldLabel('Last Name'),
               TextFormField(
                 controller: _lastNameController,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'Last name'),
                 decoration: const InputDecoration(hintText: 'Singh'),
               ),
               const SizedBox(height: 16),
               const FieldLabel('Business / Organization Name'),
               TextFormField(
                 controller: _businessNameController,
+                validator: (value) => InputValidators.requiredField(
+                  value,
+                  label: 'Business name',
+                ),
                 decoration: const InputDecoration(
                     hintText: 'DLF Sports Arena Pvt. Ltd.'),
               ),
@@ -186,11 +187,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hint: '9876543210',
                 keyboardType: TextInputType.phone,
                 controller: _phoneController,
+                errorText: _phoneError,
+                onChanged: (_) {
+                  if (_phoneError != null) setState(() => _phoneError = null);
+                },
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
               ),
               const SizedBox(height: 16),
               const FieldLabel('Email Address'),
               TextFormField(
                 controller: _emailController,
+                validator: InputValidators.email,
                 decoration:
                     const InputDecoration(hintText: 'vikram@dlfarena.com'),
                 keyboardType: TextInputType.emailAddress,
@@ -199,18 +209,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const FieldLabel('City'),
               TextFormField(
                 controller: _cityController,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'City'),
                 decoration: const InputDecoration(hintText: 'Gurugram'),
               ),
               const SizedBox(height: 16),
               const FieldLabel('State'),
               TextFormField(
                 controller: _stateController,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'State'),
                 decoration: const InputDecoration(hintText: 'Haryana'),
               ),
               const SizedBox(height: 16),
               const FieldLabel('Sports'),
               TextFormField(
                 controller: _sportsController,
+                validator: (value) =>
+                    InputValidators.requiredField(value, label: 'Sports'),
                 decoration: const InputDecoration(hintText: 'Cricket, Football'),
               ),
               const SizedBox(height: 16),
@@ -233,6 +249,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),
