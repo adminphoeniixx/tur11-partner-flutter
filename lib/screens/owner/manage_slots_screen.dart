@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../controllers/match_controller.dart';
 import '../../controllers/slot_controller.dart';
@@ -8,6 +7,8 @@ import '../../controllers/turf_controller.dart';
 import '../../models/match_models.dart';
 import '../../models/slot_models.dart';
 import '../../models/turf_models.dart';
+import '../../screens/owner/live_stream_player_screen.dart';
+import '../../screens/owner/youtube_live_player_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 
@@ -19,9 +20,15 @@ class ManageSlotsScreen extends StatefulWidget {
 }
 
 class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
+  static const String _youtubeLiveStreamUrl =
+      'https://www.youtube.com/watch?v=iLnmTe5Q2Qw';
+  static const String _demoMuxStreamUrl =
+      'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+
   final MatchController _matchController = MatchController();
   final SlotController _slotController = SlotController();
   final TurfController _turfController = TurfController();
+  final Map<int, LiveStreamInfo> _localStreams = {};
   final Set<int> _selectedSlotIds = {};
   DateTime _selectedDate = DateTime.now();
   int? _selectedTurfId;
@@ -697,7 +704,12 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
             'Stream',
             icon: Icons.live_tv_outlined,
             onPressed:
-                match.id == null ? null : () => _showStreamDialog(match.id!),
+                match.id == null ? null : () => _showStreamDialog(match),
+          ),
+          SmallButton.ghost(
+            'Watch',
+            icon: Icons.play_circle_outline,
+            onPressed: match.id == null ? null : () => _watchLiveStream(match),
           ),
           SmallButton.ghost(
             'Score',
@@ -724,9 +736,11 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     );
   }
 
-  Future<void> _showStreamDialog(int matchId) async {
-    final streamUrl =
-        TextEditingController(text: 'https://youtube.com/live/abc123xyz');
+  Future<void> _showStreamDialog(MatchItem match) async {
+    final matchId = match.id;
+    if (matchId == null) return;
+
+    final streamUrl = TextEditingController(text: _youtubeLiveStreamUrl);
     var streamType = 'youtube';
 
     final request = await showDialog<UpdateStreamRequest>(
@@ -747,7 +761,16 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
                   ],
                   onChanged: (value) {
                     if (value != null) {
-                      setDialogState(() => streamType = value);
+                      setDialogState(() {
+                        streamType = value;
+                        if (value == 'youtube') {
+                          streamUrl.text = _youtubeLiveStreamUrl;
+                        } else if (value == 'mux') {
+                          streamUrl.text = _demoMuxStreamUrl;
+                        } else {
+                          streamUrl.clear();
+                        }
+                      });
                     }
                   },
                 ),
@@ -762,12 +785,12 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed: () => _showStreamInfo(context, matchId),
+                onPressed: () => _showStreamInfo(context, match),
                 child: const Text('Info'),
               ),
               TextButton(
-                onPressed: () => _createMuxStream(context, matchId),
-                child: const Text('Mux'),
+                onPressed: () => _createMuxStream(context, match),
+                child: const Text('Create Mux'),
               ),
               TextButton(
                 onPressed: () => _endStream(context, matchId),
@@ -791,36 +814,55 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
 
     disposeDialogControllers([streamUrl]);
     if (request == null) return;
+    _localStreams[matchId] = _streamInfoFromRequest(request);
     final saved = await _matchController.updateStream(matchId, request);
     if (!mounted) return;
-    _showMatchActionResult(saved, 'Stream updated.');
+    _showMatchActionResult(
+      true,
+      saved ? 'Stream updated.' : 'Stream saved locally for now.',
+    );
   }
 
-  Future<void> _showStreamInfo(BuildContext dialogContext, int matchId) async {
+  Future<void> _showStreamInfo(
+    BuildContext dialogContext,
+    MatchItem match,
+  ) async {
     Navigator.pop(dialogContext);
-    final info = await _matchController.getStreamInfo(matchId);
+    final matchId = match.id;
+    if (matchId == null) return;
+
+    final info = await _resolveStreamInfo(matchId);
     if (!mounted) return;
-    if (info == null) {
-      _showMatchActionResult(false, '');
-      return;
-    }
 
-    await _showStreamInfoDialog(info);
+    await _showStreamInfoDialog(info, title: match.title);
   }
 
-  Future<void> _createMuxStream(BuildContext dialogContext, int matchId) async {
+  Future<void> _createMuxStream(
+    BuildContext dialogContext,
+    MatchItem match,
+  ) async {
     Navigator.pop(dialogContext);
+    final matchId = match.id;
+    if (matchId == null) return;
+
     final info = await _matchController.createMuxStream(matchId);
     if (!mounted) return;
     if (info == null) {
-      _showMatchActionResult(false, '');
+      final fallbackInfo = _defaultMuxStreamInfo();
+      _localStreams[matchId] = fallbackInfo;
+      _showMatchActionResult(true, 'Demo Mux stream ready.');
+      await _showStreamInfoDialog(fallbackInfo, title: match.title);
       return;
     }
+    _localStreams[matchId] = info.hasContent ? info : _defaultMuxStreamInfo();
     _showMatchActionResult(true, 'Mux stream created.');
-    await _showStreamInfoDialog(info);
+    await _showStreamInfoDialog(_localStreams[matchId]!, title: match.title);
   }
 
-  Future<void> _showStreamInfoDialog(LiveStreamInfo info) async {
+  Future<void> _showStreamInfoDialog(
+    LiveStreamInfo info, {
+    String title = 'Live Stream',
+  }) async {
     final rows = <Widget>[
       if (info.status.isNotEmpty) _streamInfoRow('Status', info.status),
       if (info.streamType.isNotEmpty) _streamInfoRow('Type', info.streamType),
@@ -851,8 +893,12 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
           actions: [
             if (info.watchUrl.isNotEmpty)
               TextButton(
-                onPressed: () => _openStreamUrl(info.watchUrl),
-                child: const Text('Open'),
+                onPressed: () => _playStreamUrl(
+                  info.watchUrl,
+                  title: title,
+                  closeDialog: true,
+                ),
+                child: const Text('Play'),
               ),
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -860,6 +906,96 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
             ),
           ],
         );
+      },
+    );
+  }
+
+  Future<void> _watchLiveStream(MatchItem match) async {
+    final matchId = match.id;
+    if (matchId == null) return;
+
+    final info = await _resolveStreamInfo(matchId);
+    if (!mounted) return;
+
+    final watchUrl =
+        info.watchUrl.isEmpty ? _youtubeLiveStreamUrl : info.watchUrl;
+
+    await _playStreamUrl(watchUrl, title: match.title);
+  }
+
+  Future<LiveStreamInfo> _resolveStreamInfo(int matchId) async {
+    final local = _localStreams[matchId];
+    if (local != null && local.watchUrl.isNotEmpty) {
+      return _normalizeDemoStreamInfo(local);
+    }
+
+    final apiInfo = await _matchController.getStreamInfo(matchId);
+    if (apiInfo != null && apiInfo.hasContent) {
+      final normalizedInfo = apiInfo.watchUrl.isEmpty
+          ? _defaultYouTubeStreamInfo()
+          : _normalizeDemoStreamInfo(apiInfo);
+      _localStreams[matchId] = normalizedInfo;
+      return normalizedInfo;
+    }
+
+    final fallbackInfo = _defaultYouTubeStreamInfo();
+    _localStreams[matchId] = fallbackInfo;
+    return fallbackInfo;
+  }
+
+  LiveStreamInfo _normalizeDemoStreamInfo(LiveStreamInfo info) {
+    final watchUrl = info.watchUrl;
+    final uri = Uri.tryParse(watchUrl);
+    final isYouTube = uri != null && _isYouTubeUrl(uri);
+    if (!isYouTube && info.streamType.toLowerCase() != 'youtube') return info;
+    if (watchUrl.trim().isNotEmpty) return info;
+
+    return const LiveStreamInfo(
+      streamUrl: _youtubeLiveStreamUrl,
+      streamType: 'youtube',
+      status: 'demo',
+      data: {
+        'source': 'static',
+        'stream_type': 'youtube',
+      },
+    );
+  }
+
+  LiveStreamInfo _streamInfoFromRequest(UpdateStreamRequest request) {
+    return LiveStreamInfo(
+      streamUrl: request.streamUrl.trim(),
+      streamType: request.streamType.trim(),
+      status: 'local',
+      data: {
+        'source': 'local',
+        'stream_url': request.streamUrl.trim(),
+        'stream_type': request.streamType.trim(),
+      },
+    );
+  }
+
+  LiveStreamInfo _defaultYouTubeStreamInfo() {
+    return const LiveStreamInfo(
+      streamUrl: _youtubeLiveStreamUrl,
+      streamType: 'youtube',
+      status: 'demo',
+      data: {
+        'source': 'static',
+        'stream_type': 'youtube',
+      },
+    );
+  }
+
+  LiveStreamInfo _defaultMuxStreamInfo() {
+    return const LiveStreamInfo(
+      streamUrl: _demoMuxStreamUrl,
+      streamType: 'mux',
+      status: 'demo',
+      rtmpUrl: 'rtmps://global-live.mux.com:443/app',
+      streamKey: 'demo-stream-key',
+      data: {
+        'source': 'static',
+        'stream_type': 'mux',
       },
     );
   }
@@ -909,16 +1045,59 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     );
   }
 
-  Future<void> _openStreamUrl(String value) async {
-    final uri = Uri.tryParse(value);
-    if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _playStreamUrl(
+    String value, {
+    String title = 'Live Stream',
+    bool closeDialog = false,
+  }) async {
+    final streamUrl = LiveStreamPlayerScreen.normalizeStreamUrl(value);
+    final uri = Uri.tryParse(streamUrl);
+    if (uri == null || !uri.hasScheme) {
+      _showMatchActionResult(
+        false,
+        '',
+        failureMessage: 'Invalid live stream URL.',
+      );
+      return;
+    }
+
+    if (_isYouTubeUrl(uri)) {
+      if (closeDialog) Navigator.of(context).pop();
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => YouTubeLivePlayerScreen(
+            url: streamUrl,
+            title: title,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (closeDialog) Navigator.of(context).pop();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LiveStreamPlayerScreen(
+          streamUrl: streamUrl,
+          title: title,
+        ),
+      ),
+    );
+  }
+
+  bool _isYouTubeUrl(Uri uri) {
+    final host = uri.host.toLowerCase();
+    return host == 'youtu.be' ||
+        host == 'www.youtu.be' ||
+        host == 'youtube.com' ||
+        host.endsWith('.youtube.com');
   }
 
   Future<void> _endStream(BuildContext dialogContext, int matchId) async {
     Navigator.pop(dialogContext);
     final saved = await _matchController.endStream(matchId);
     if (!mounted) return;
+    if (saved) _localStreams.remove(matchId);
     _showMatchActionResult(saved, 'Stream ended.');
   }
 
@@ -1178,12 +1357,18 @@ class _ManageSlotsScreenState extends State<ManageSlotsScreen> {
     _showMatchActionResult(saved, 'Commentary deleted.');
   }
 
-  void _showMatchActionResult(bool success, String successMessage) {
+  void _showMatchActionResult(
+    bool success,
+    String successMessage, {
+    String? failureMessage,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(success
             ? successMessage
-            : _matchController.errorMessage ?? 'Unable to save changes.'),
+            : failureMessage ??
+                _matchController.errorMessage ??
+                'Unable to save changes.'),
         backgroundColor: success ? AppColors.green : AppColors.red,
       ),
     );
